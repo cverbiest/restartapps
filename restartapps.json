@@ -1,0 +1,22 @@
+[
+  {
+    "Name": "RDP Plus",
+    "Commandline": "\"C:\\Program Files (x86)\\Remote Desktop Plus\\rdp.exe\" /tray",
+    "Restart": true
+  },
+  {
+    "Name": "ClickShare",
+    "Commandline": "C:\\Users\\cvb\\AppData\\Local\\ClickShare\\ClickShare.exe",
+    "Restart": false
+  },
+  {
+    "Name": "Teams",
+    "Commandline": "",
+    "Restart": false
+  },
+  {
+    "Name": "3CX",
+    "Commandline": "C:\\Users\\cvb\\AppData\\Local\\Programs\\3CXDesktopApp\\3CXDesktopApp.exe",
+    "Restart": false
+  }
+]
