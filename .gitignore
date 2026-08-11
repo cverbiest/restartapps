@@ -1,2 +1,60 @@
+# Build output
 bin/
 obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+publish/
+*.dll
+*.exe
+*.pdb
+
+# Visual Studio / Rider / VS Code
+.vs/
+.idea/
+*.user
+*.suo
+*.userprefs
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/extensions.json
+
+# NuGet
+*.nupkg
+packages/
+
+# Local / machine-specific configuration
+restartapps.local.json
+*.local.json
+appsettings.*.local.json
+
+# Secrets and credentials — never commit these
+*.env
+.env*
+!.env.example
+secrets.json
+*.secret
+*.secrets
+*credential*
+*credentials*
+*.pfx
+*.p12
+*.pem
+*.key
+*.keystore
+*.snk
+*_rsa
+*_dsa
+*_ed25519
+id_rsa*
+*.publishsettings
+*.pubxml
+*.pubxml.user
+NuGet.local.config
+
+# OS noise
+Thumbs.db
+desktop.ini
+.DS_Store
