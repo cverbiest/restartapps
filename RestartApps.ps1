@@ -11,6 +11,9 @@ if (-not (Test-Path $ConfigFile)) {
 
 try {
     $AppList = Get-Content -Path $ConfigFile | ConvertFrom-Json
+    foreach ($app in $AppList) {
+        $app.Commandline = [System.Environment]::ExpandEnvironmentVariables($app.Commandline)
+    }
 }
 catch {
     [System.Windows.Forms.MessageBox]::Show("Error reading configuration file: $_", "Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
