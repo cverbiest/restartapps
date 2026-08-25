@@ -1,22 +1,46 @@
-[
-  {
-    "Name": "RDP Plus",
-    "Commandline": "\"%ProgramFiles(x86)%\\Remote Desktop Plus\\rdp.exe\" /tray",
-    "Restart": true
-  },
-  {
-    "Name": "ClickShare",
-    "Commandline": "%LOCALAPPDATA%\\ClickShare\\ClickShare.exe",
-    "Restart": false
-  },
-  {
-    "Name": "Teams",
-    "Commandline": "%LOCALAPPDATA%\\Microsoft\\WindowsApps\\ms-teams.exe",
-    "Restart": false
-  },
-  {
-    "Name": "3CX",
-    "Commandline": "%LOCALAPPDATA%\\Programs\\3CXDesktopApp\\3CXDesktopApp.exe",
-    "Restart": false
-  }
-]
+{
+  "Apps": [
+    {
+      "Name": "RDP Plus",
+      "Commandline": "\"%ProgramFiles(x86)%\\Remote Desktop Plus\\rdp.exe\" /tray",
+      "Kill": true,
+      "Restart": true,
+      "Disabled": false,
+      "StopMethod": "Process"
+    },
+    {
+      "Name": "ClickShare",
+      "Commandline": "%LOCALAPPDATA%\\ClickShare\\ClickShare.exe",
+      "Kill": true,
+      "Restart": false,
+      "Disabled": false,
+      "StopMethod": "Process"
+    },
+    {
+      "Name": "Teams",
+      "Commandline": "%LOCALAPPDATA%\\Microsoft\\WindowsApps\\ms-teams.exe",
+      "Kill": true,
+      "Restart": false,
+      "Disabled": false,
+      "StopMethod": "Process"
+    },
+    {
+      "Name": "3CX",
+      "Commandline": "%LOCALAPPDATA%\\Programs\\3CXDesktopApp\\3CXDesktopApp.exe",
+      "Kill": true,
+      "Restart": false,
+      "Disabled": false,
+      "StopMethod": "Process"
+    },
+    {
+      "Name": "Outlook",
+      "Commandline": "\"C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\chrome_proxy.exe\"  --profile-directory=\"Profile 5\" --app-id=faolnafnngnfdaknnbpnkhgohbobgegn",
+      "Kill": false,
+      "Restart": false,
+      "Disabled": false,
+      "StopMethod": "Window",
+      "WindowAumid": "*_crx_faolngohbobgegn*"
+    }
+  ],
+  "Profiles": []
+}
