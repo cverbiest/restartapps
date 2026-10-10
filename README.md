@@ -43,7 +43,8 @@ their child processes. Failures to stop a process are ignored; failures to start
 ### Profiles (.NET version only)
 
 A profile is a named set of Kill/Restart ticks. The bar above the grid manages them, and every
-profile also gets its own button on the "One click" row:
+profile also gets its own button on the "One click apps" row. That row sits above the tabs, so the
+profiles stay one click away whichever tab is showing:
 
 | Control | Effect |
 | --- | --- |
@@ -59,6 +60,67 @@ thing" shortcut they are meant to be.
 An application the profile has never heard of is cleared (neither killed nor started) rather than
 left at whatever it happened to be, so a profile always describes the whole run. Profiles are stored
 in `restartapps.json` and every profile operation saves the file immediately.
+
+### Workspaces (.NET version only)
+
+The window opens on **Workspaces**, the first of its two tabs; **Apps** is the second and is
+everything described above. **Workspaces** lists VS Code workspaces and folders, says which ones VS
+Code currently has open, and launches them:
+
+| Control | Effect |
+| --- | --- |
+| **Pref** | Keeps the workspace on the preferred list. Saved to `restartapps.json` straight away. |
+| **Close** | Include this window in **Close Ticked**. Only available while the workspace is open. |
+| **Open** | Include this workspace in **Open Ticked**, and in a saved session. |
+| **Launch** / **Focus** | Opens the workspace in VS Code. One that is already open is focused rather than opened a second time. |
+| **Close Ticked** | Asks the ticked windows to close. |
+| **Open Ticked** | Opens every workspace ticked Open. |
+| **Show all recent** | Widens the list from the preferred entries to every workspace VS Code has opened, most recent first. |
+| **Refresh** | Re-reads the list and re-checks which entries are open. |
+
+Like the Kill and Restart ticks, Close and Open are session-only and are never written to the file.
+
+The list is read from `%APPDATA%\Code\User\workspaceStorage`, so it covers local folders,
+`.code-workspace` files, SSH remotes, WSL and dev containers alike, and it is ordered by when each
+was last opened. An entry counts as open when a VS Code window still holds its workspace state
+database. Window titles are deliberately not used for this: `window.title` is configurable and need
+not contain the path at all.
+
+The list also refreshes when you switch to the tab and when the window is activated, so it is
+usually current without pressing Refresh.
+
+#### Closing a window
+
+Closing asks the window to close, exactly as **Stopping browser-hosted PWAs** above does — a posted
+`WM_CLOSE`, never a kill — so VS Code's save prompts and hot exit still run and unsaved work is
+never thrown away. A window that has not gone after three seconds is left alone and logged; it is
+usually sitting on a "do you want to save" dialog.
+
+Which window belongs to which workspace can only be read from the window *title*, because VS Code
+puts every window in one process under one AppUserModelID. So the rule is deliberately strict:
+**a window is closed only when exactly one open window matches.** If two match — two workspaces both
+called `develop`, say — nothing is closed and the log names the candidates. Pin the right one with a
+wildcard title pattern on the workspace entry:
+
+```jsonc
+{ "Name": "develop (linux)", "Uri": "vscode-remote://ssh-remote%2Bhost/...", "WindowTitle": "develop linux*" }
+```
+
+#### Sessions
+
+A **session** is a named set of workspaces to open together — the workspace counterpart of a
+profile, and deliberately open-only: a session never closes anything.
+
+| Control | Effect |
+| --- | --- |
+| **Load** | Ticks Open for the session's workspaces and clears it everywhere else. Nothing is opened. |
+| **Save As...** | Stores the workspaces ticked Open under a new name. |
+| **Update** | Overwrites the selected session with the workspaces ticked Open. |
+| **Delete** | Removes the selected session, after confirming. |
+| **One-click button** | Opens that session's workspaces straight away, including any the current filter hides. |
+
+The session buttons live on the "One click sessions" row above the tabs, next to the profile
+buttons, so both sets stay reachable from either tab.
 
 ### Live configuration reload (.NET version only)
 
@@ -115,8 +177,8 @@ refuse. Nothing is force-killed by this method.
 ## Configuration
 
 `restartapps.json` sits next to the executable (or in the current directory). The current layout is
-an object with `Apps` and `Profiles`; a bare array of applications (the original format) is still
-read and is upgraded to the new layout the next time the file is saved.
+an object with `Apps`, `Profiles` and `Workspaces`; a bare array of applications (the original
+format) is still read and is upgraded to the new layout the next time the file is saved.
 
 ```json
 {
@@ -167,6 +229,34 @@ Every field except `Name` and `Commandline` is optional. The `Profiles` list may
 | `Name` | Shown in the drop-down and on the profile's one-click button. |
 | `Entries` | Per-application `Name` / `Kill` / `Restart`. Applications not listed are cleared when the profile loads. |
 
+The preferred VS Code workspaces live in `Workspaces`, and are written by the Pref tick box rather
+than by hand:
+
+```json
+  "Workspaces": [
+    { "Name": "develop (linux)", "Uri": "vscode-remote://ssh-remote%2Bcce-dev03/home/cvb/develop/develop.code-workspace" },
+    { "Name": "restartapps", "Uri": "file:///c%3A/cce/workspaces/restartapps" }
+  ]
+```
+
+| Workspace field | Meaning |
+| --- | --- |
+| `Name` | Label shown in the grid, and nothing more. Rename it to tell two same-named workspaces apart — the app picks the change up on the next reload. |
+| `Uri` | The workspace URI as VS Code stores it. This is what identifies the entry and what launches it. |
+| `WindowTitle` | Optional. Which window belongs to this workspace, with `*` and `?` wildcards. Only needed when the name alone matches more than one open window; see *Closing a window* above. |
+
+Sessions live in `WorkspaceProfiles`, each a name and the URIs it opens:
+
+```json
+  "WorkspaceProfiles": [
+    { "Name": "Linux dev", "Workspaces": [ "vscode-remote://ssh-remote%2Bcce-dev03/home/cvb/develop/develop.code-workspace" ] }
+  ]
+```
+
+Add `"VsCodeExecutable": "..."` at the top level if VS Code is not in one of the usual places;
+otherwise `%LOCALAPPDATA%\Programs\Microsoft VS Code`, `%ProgramFiles%\Microsoft VS Code` and
+`code.cmd` on `PATH` are tried in that order.
+
 Comments and trailing commas are tolerated. The file shipped in this repository is an example —
 edit it to match your own machine. Anything machine-specific you do not want to commit can go in a
 `restartapps.local.json`, which is git-ignored.
@@ -182,10 +272,21 @@ dotnet run
 To produce a standalone build:
 
 ```powershell
-dotnet publish -c Release -r win-x64 --self-contained false
+dotnet publish -c Release
 ```
 
-`restartapps.json` is copied to the output directory as part of the build.
+The publish options live in `RestartApps.csproj`, not on the command line, so that plain command is
+the whole story. It produces a framework-dependent, ReadyToRun win-x64 build in
+`bin\Release\net10.0-windows\publish`. ReadyToRun precompiles the IL ahead of time - the Krypton
+assemblies as well as the app - which is what a cold start would otherwise spend its time JITting.
+It roughly doubles the size of the published folder, to about 23 MB, in exchange for that startup.
+
+Being framework-dependent, the published app needs the .NET 10 desktop runtime on the machine that
+runs it. Set `<SelfContained>true</SelfContained>` in the project file if you would rather carry the
+runtime along.
+
+`restartapps.json` is copied to the output directory as part of the build, but only when the copy
+already there is older - your edited configuration in the publish folder survives a republish.
 
 ## Run (PowerShell version)
 
@@ -198,6 +299,19 @@ powershell -ExecutionPolicy Bypass -File .\RestartApps.ps1
 - Windows only — both versions use WinForms and terminate processes by name.
 - Killing applications by process name affects *all* instances of that executable, including ones
   you did not start from this tool.
+- The Workspaces tab reads VS Code Stable's storage under `%APPDATA%\Code`. Insiders and other
+  forks are not detected.
+- A dev container built from a WSL folder keeps both storage entries live, so that folder can show
+  as open under `WSL:` as well as under `Dev Container`.
+
+## Tests
+
+```powershell
+dotnet test RestartApps.Tests
+```
+
+Covers the workspace URI decoding, the storage scan, the open probe, executable resolution, the
+grid's row rules and configuration round-tripping. The WinForms layer is not unit tested.
 
 ## License
 

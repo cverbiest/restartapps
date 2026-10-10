@@ -84,10 +84,47 @@ internal sealed class ProfileEntry
     public bool Restart { get; set; }
 }
 
+/// <summary>A VS Code workspace or folder kept on the Workspaces tab.</summary>
+internal sealed class WorkspaceFavorite
+{
+    /// <summary>Shown in the grid. Seeded from the workspace's own name and editable in the file.</summary>
+    public required string Name { get; set; }
+
+    /// <summary>The URI as VS Code stores it, which is what identifies and launches the workspace.</summary>
+    public required string Uri { get; set; }
+
+    /// <summary>
+    /// Which window belongs to this workspace, with <c>*</c> and <c>?</c> wildcards. Only needed when
+    /// the name alone is ambiguous - two workspaces called "develop", say - because closing refuses to
+    /// guess between windows. Absent means match on the workspace name.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? WindowTitle { get; set; }
+}
+
+/// <summary>A named set of workspaces to open together. Opening only: profiles never close a window.</summary>
+internal sealed class WorkspaceProfile
+{
+    public required string Name { get; set; }
+
+    /// <summary>The URIs to open, in the order they are opened.</summary>
+    public List<string> Workspaces { get; set; } = [];
+}
+
 internal sealed class ConfigurationFile
 {
     public List<AppConfiguration> Apps { get; set; } = [];
     public List<Profile> Profiles { get; set; } = [];
+
+    /// <summary>The preferred VS Code workspaces, in the order they are shown.</summary>
+    public List<WorkspaceFavorite> Workspaces { get; set; } = [];
+
+    /// <summary>Named sets of workspaces to open together.</summary>
+    public List<WorkspaceProfile> WorkspaceProfiles { get; set; } = [];
+
+    /// <summary>Overrides where VS Code is looked for. Absent means the usual install locations.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? VsCodeExecutable { get; set; }
 }
 
 internal sealed record ConfigurationSnapshot(ConfigurationFile Configuration, string Json);
@@ -127,7 +164,7 @@ internal static class AppConfigurationStore
         return new ConfigurationSnapshot(configuration, json);
     }
 
-    private static ConfigurationFile Parse(string json)
+    internal static ConfigurationFile Parse(string json)
     {
         using var document = JsonDocument.Parse(json, new JsonDocumentOptions
         {
@@ -149,9 +186,14 @@ internal static class AppConfigurationStore
     /// <summary>Writes the configuration back to disk and returns the JSON that was written.</summary>
     public static string Save(ConfigurationFile configuration)
     {
-        var json = JsonSerializer.Serialize(configuration, WriteOptions);
+        var json = ToJson(configuration);
         File.WriteAllText(FilePath, json);
         return json;
+    }
+
+    internal static string ToJson(ConfigurationFile configuration)
+    {
+        return JsonSerializer.Serialize(configuration, WriteOptions);
     }
 
     private static string FindConfigFile()

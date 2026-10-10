@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -65,6 +66,9 @@ internal static class WindowFinder
     private static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int maxCount);
 
     [DllImport("user32.dll")]
+    private static extern int GetWindowThreadProcessId(IntPtr hWnd, out int processId);
+
+    [DllImport("user32.dll")]
     private static extern bool PostMessage(IntPtr hWnd, uint message, IntPtr wParam, IntPtr lParam);
 
     [DllImport("shell32.dll")]
@@ -129,6 +133,53 @@ internal static class WindowFinder
 
         return matches;
     }
+
+    /// <summary>
+    /// Every visible top-level window belonging to a process with this name. Used for VS Code, whose
+    /// windows all share one process and one AppUserModelID, so neither can tell them apart.
+    /// </summary>
+    public static List<WindowInfo> FindByProcessName(string processName)
+    {
+        var pids = new HashSet<int>();
+        foreach (var process in Process.GetProcessesByName(processName))
+        {
+            pids.Add(process.Id);
+            process.Dispose();
+        }
+
+        var matches = new List<WindowInfo>();
+        if (pids.Count == 0)
+        {
+            return matches;
+        }
+
+        EnumWindows((hWnd, _) =>
+        {
+            if (!IsWindowVisible(hWnd))
+            {
+                return true;
+            }
+
+            GetWindowThreadProcessId(hWnd, out var pid);
+            if (!pids.Contains(pid))
+            {
+                return true;
+            }
+
+            var title = GetTitle(hWnd);
+            if (title.Length > 0)
+            {
+                matches.Add(new WindowInfo(hWnd, title, string.Empty));
+            }
+
+            return true;
+        }, IntPtr.Zero);
+
+        return matches;
+    }
+
+    /// <summary>Wildcard match, with <c>*</c> and <c>?</c>, as used for window titles and AppUserModelIDs.</summary>
+    public static bool MatchesPattern(string pattern, string text) => BuildMatcher(pattern).IsMatch(text);
 
     /// <summary>Asks the window to close. Posted, not sent, so an unresponsive app cannot block us.</summary>
     public static void Close(IntPtr hWnd) => PostMessage(hWnd, WM_CLOSE, IntPtr.Zero, IntPtr.Zero);

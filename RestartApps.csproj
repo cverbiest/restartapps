@@ -5,6 +5,21 @@
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- Publish settings live here rather than on the command line, so a bare `dotnet publish`
+         produces the format we actually want. ReadyToRun precompiles the IL in the publish folder -
+         the app and the Krypton assemblies alike - which is what a cold start spends its time on.
+         The runtime identifier that ReadyToRun needs is kept out of the output path, so the
+         published app stays in bin\<config>\<tfm>\publish instead of moving under a win-x64 folder. -->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <!-- The SDK derives PublishDir separately, and would still slip win-x64 into it. -->
+    <PublishDir>bin\$(Configuration)\$(TargetFramework)\publish\</PublishDir>
+    <!-- This project sits in the repository root, so its wildcards would otherwise swallow the
+         test project that lives in a subdirectory. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);RestartApps.Tests\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,5 +29,11 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Krypton.Toolkit" Version="105.26.4.110" />
+    <PackageReference Include="Krypton.Navigator" Version="105.26.4.110" />
+  </ItemGroup>
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>RestartApps.Tests</_Parameter1>
+    </AssemblyAttribute>
   </ItemGroup>
 </Project>
