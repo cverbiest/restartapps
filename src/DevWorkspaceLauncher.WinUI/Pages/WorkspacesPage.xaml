@@ -98,7 +98,7 @@
                                 <ColumnDefinition Width="88" />
                             </Grid.ColumnDefinitions>
                             <Button Click="Preferred_Click" Padding="6" Background="Transparent" BorderThickness="0"
-                                    ToolTipService.ToolTip="{x:Bind PreferredTooltip}">
+                                    ToolTipService.ToolTip="{x:Bind PreferredTooltip}" AutomationProperties.Name="{x:Bind PreferredTooltip}">
                                 <FontIcon Glyph="{x:Bind PreferredGlyph}" FontSize="14" />
                             </Button>
                             <CheckBox Grid.Column="1" MinWidth="0" IsChecked="{x:Bind Close, Mode=OneWay}" IsEnabled="{x:Bind IsOpen}"

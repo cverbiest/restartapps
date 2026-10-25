@@ -12,6 +12,9 @@ public sealed class AppState
 {
     private ConfigurationWatcher? _watcher;
 
+    /// <summary>Whether <see cref="Config"/> came from the file. Until it has, nothing may be saved.</summary>
+    private bool _loaded;
+
     public ConfigurationFile Config { get; private set; } = new();
 
     public string ConfigPath => AppConfigurationStore.FilePath;
@@ -57,20 +60,33 @@ public sealed class AppState
 
     public IReadOnlyList<AppConfiguration> VisibleApps => Config.Apps.Where(app => !app.Disabled).ToList();
 
-    /// <summary>Loads the configuration (migrating or creating it first) and starts watching it. Call on the UI thread.</summary>
+    /// <summary>
+    /// Loads the configuration (migrating or creating it first) and starts watching it. Call on the UI
+    /// thread. A file that fails to load is still watched, so fixing it brings the app back.
+    /// </summary>
     public void Initialize()
     {
+        var lastKnownJson = string.Empty;
         try
         {
             var setupMessage = AppConfigurationStore.EnsureExists();
             var snapshot = AppConfigurationStore.Load();
             Config = snapshot.Configuration;
+            lastKnownJson = snapshot.Json;
+            _loaded = true;
             if (setupMessage is not null)
             {
                 LogMessage(setupMessage);
             }
+        }
+        catch (Exception ex)
+        {
+            LogMessage($"Failed to load configuration: {ex.Message} Nothing will be saved until the file loads; fix it and it reloads.");
+        }
 
-            _watcher = new ConfigurationWatcher(ConfigPath) { LastKnownJson = snapshot.Json };
+        try
+        {
+            _watcher = new ConfigurationWatcher(ConfigPath) { LastKnownJson = lastKnownJson };
             _watcher.Reloaded += (_, reloaded) => ApplyReload(reloaded);
             _watcher.Failed += (_, message) => LogMessage(message);
             _watcher.Start();
@@ -78,7 +94,7 @@ public sealed class AppState
         }
         catch (Exception ex)
         {
-            LogMessage($"Failed to load configuration: {ex.Message}");
+            LogMessage($"Could not watch the configuration file: {ex.Message}");
         }
     }
 
@@ -88,8 +104,18 @@ public sealed class AppState
         MessageLogged?.Invoke(this, message);
     }
 
+    /// <summary>
+    /// Writes the configuration back. Refused while the file has never loaded: what is in memory then is
+    /// an empty stand-in, and saving it would wipe every app, profile, session and activity in the file.
+    /// </summary>
     public void Save()
     {
+        if (!_loaded)
+        {
+            LogMessage($"Not saved: {ConfigPath} did not load. Fix the file - it reloads automatically - and try again.");
+            return;
+        }
+
         try
         {
             var json = AppConfigurationStore.Save(Config);
@@ -185,6 +211,7 @@ public sealed class AppState
     private void ApplyReload(ConfigurationSnapshot snapshot)
     {
         Config = snapshot.Configuration;
+        _loaded = true;
         ConfigurationChanged?.Invoke(this, EventArgs.Empty);
 
         var visible = VisibleApps.Count;

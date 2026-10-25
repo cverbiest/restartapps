@@ -25,6 +25,17 @@ public class ActivityConfigurationTests
     }
 
     [Fact]
+    public void Null_item_lists_are_empty_lists()
+    {
+        var activity = Assert.Single(AppConfigurationStore.Parse("""
+            { "Activities": [ { "Name": "X", "Apps": null, "Workspaces": null } ] }
+            """).Activities);
+
+        Assert.Empty(activity.Apps);
+        Assert.Empty(activity.Workspaces);
+    }
+
+    [Fact]
     public void Missing_Activities_is_an_empty_list()
     {
         Assert.Empty(AppConfigurationStore.Parse("""{ "Apps": [] }""").Activities);

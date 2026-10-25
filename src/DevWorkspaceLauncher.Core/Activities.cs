@@ -36,8 +36,20 @@ public sealed class WorkspaceActionConverter() : CaseInsensitiveEnumConverter<Wo
 public sealed class Activity
 {
     public required string Name { get; set; }
-    public List<ActivityApp> Apps { get; set; } = [];
-    public List<ActivityWorkspace> Workspaces { get; set; } = [];
+
+    /// <summary>Never null: <c>"Apps": null</c> in the file reads as an empty list.</summary>
+    public List<ActivityApp> Apps
+    {
+        get;
+        set => field = value ?? [];
+    } = [];
+
+    /// <summary>Never null: <c>"Workspaces": null</c> in the file reads as an empty list.</summary>
+    public List<ActivityWorkspace> Workspaces
+    {
+        get;
+        set => field = value ?? [];
+    } = [];
 }
 
 public sealed class ActivityApp

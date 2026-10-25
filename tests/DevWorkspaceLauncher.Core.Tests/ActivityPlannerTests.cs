@@ -141,6 +141,18 @@ public class ActivityPlannerTests
         Assert.Null(step.WindowTitle);
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(@"c:\work\one")]
+    public void Workspace_that_is_not_a_uri_is_noted_and_skipped(string uri)
+    {
+        var plan = Plan(workspaces: [new ActivityWorkspace { Uri = uri }, new ActivityWorkspace { Uri = U2 }]);
+
+        Assert.Equal(["OpenWorkspace two"], Describe(plan));
+        Assert.Equal([$"'{uri}' is not a workspace URI; skipped."], plan.Notes);
+    }
+
     [Fact]
     public void Empty_activity_has_nothing_to_do()
     {

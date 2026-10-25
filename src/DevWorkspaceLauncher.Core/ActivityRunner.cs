@@ -7,14 +7,14 @@ public static class ActivityRunner
     {
         log($"Running activity '{activity.Name}'...");
 
-        var plan = ActivityPlanner.Plan(activity, config, AppController.IsRunning);
-        foreach (var note in plan.Notes)
-        {
-            log(note);
-        }
-
         try
         {
+            var plan = ActivityPlanner.Plan(activity, config, AppController.IsRunning);
+            foreach (var note in plan.Notes)
+            {
+                log(note);
+            }
+
             foreach (var step in plan.Steps.Where(step => step.Kind != ActivityStepKind.OpenWorkspace))
             {
                 switch (step.Kind)

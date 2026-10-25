@@ -9,6 +9,13 @@ public partial class App : Application
     public App()
     {
         InitializeComponent();
+
+        // An error escaping an event handler would otherwise end the app; log it and carry on.
+        UnhandledException += (_, e) =>
+        {
+            e.Handled = true;
+            State.LogMessage($"Error: {e.Exception.Message}");
+        };
     }
 
     /// <summary>The state shared by the window and its pages.</summary>

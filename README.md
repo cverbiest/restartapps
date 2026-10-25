@@ -207,7 +207,10 @@ The configuration is `%APPDATA%\DevWorkspaceLauncher\devworkspacelauncher.json`,
 copy of the app. A `devworkspacelauncher.json` next to the executable takes precedence, for a
 portable copy. On first start, if neither exists, a `restartapps.json` from before the rename (next
 to the executable or in the current directory) is copied to the shared location and left in place;
-otherwise an empty configuration is created. The current layout is an object with `Apps`, `Profiles` and `Workspaces`; a bare array of applications (the original
+otherwise an empty configuration is created. The log says which happened. If an empty one was
+created while your old `restartapps.json` lives somewhere else (next to an older copy of the app,
+say), close both apps and copy that file over the shared one. Migration never overwrites an existing
+shared file. The current layout is an object with `Apps`, `Profiles` and `Workspaces`; a bare array of applications (the original
 format) is still read and is upgraded to the new layout the next time the file is saved.
 
 ```json

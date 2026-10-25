@@ -82,6 +82,12 @@ public static class ActivityPlanner
 
         foreach (var item in activity.Workspaces)
         {
+            if (!IsWorkspaceUri(item.Uri))
+            {
+                notes.Add($"'{item.Uri}' is not a workspace URI; skipped.");
+                continue;
+            }
+
             var favorite = config.Workspaces.FirstOrDefault(candidate =>
                 string.Equals(candidate.Uri, item.Uri, StringComparison.OrdinalIgnoreCase));
             var name = favorite?.Name ?? VsCodeUri.Describe(item.Uri).DisplayName;
@@ -113,6 +119,11 @@ public static class ActivityPlanner
         }
 
         return new ActivityPlan(steps, notes);
+
+        // VS Code stores every workspace as a URI with a scheme - file://, vscode-remote:// - so a
+        // plain path or a blank entry is a typo in the file, not something to hand to VS Code.
+        static bool IsWorkspaceUri(string? uri) =>
+            !string.IsNullOrWhiteSpace(uri) && uri.Contains("://", StringComparison.Ordinal);
 
         void AddStartIfNotRunning(AppConfiguration app)
         {
