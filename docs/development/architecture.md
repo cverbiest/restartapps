@@ -32,6 +32,12 @@ A new feature therefore goes into Core first, with tests, and then into both app
   (`RunActivityAsync`, `RunSessionAsync`, `RunProfileAsync`, `ApplyProfile`, `ApplySession`). Pages
   subscribe to its events (`ConfigurationChanged`, `AppsChanged`, `WorkspacesChanged`,
   `WindowActivated`, `BusyChanged`) and unsubscribe when navigated away from.
+  `ConfigurationChanged` fires both after a reload from disk and after `AppState.Save`, because the
+  watcher ignores the app's own write - so a session saved on the Workspaces page shows up in the rail.
+- Pages are plain code-behind with small `INotifyPropertyChanged` item wrappers (`WorkspaceItem`,
+  `AppItem`) around Core's types; lists are `ListView`s with a header `Grid` whose column widths match
+  the item template. Toolbars are rows of buttons (an accent button for the main action) with a
+  `DropDownButton` menu for Load / Save As / Update / Delete.
 - `MainWindow` holds the `NavigationView` rail. Activities, sessions and profiles are rail items with
   `SelectsOnInvoked = false` that run on `ItemInvoked`. Two traps found the hard way: NavigationView
   can bounce an invocation of a non-selecting item (re-invoking the previous page, then the item), so

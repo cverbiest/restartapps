@@ -21,6 +21,12 @@ public sealed class AppState
 
     public bool Busy { get; private set; }
 
+    /// <summary>The session picked in the Workspaces page's Session menu, kept across page visits.</summary>
+    public string? SelectedSessionName { get; set; }
+
+    /// <summary>The profile picked in the Apps page's Profile menu, kept across page visits.</summary>
+    public string? SelectedProfileName { get; set; }
+
     /// <summary>Whether the Workspaces page shows every recent workspace rather than the preferred ones.</summary>
     public bool ShowAllWorkspaces { get; set; }
 
@@ -33,7 +39,10 @@ public sealed class AppState
     /// <summary>Raised with each message as it is logged (without the timestamp).</summary>
     public event EventHandler<string>? MessageLogged;
 
-    /// <summary>Raised after the configuration was reloaded from disk.</summary>
+    /// <summary>
+    /// Raised after the configuration was reloaded from disk or saved from here - either way the rail
+    /// and the pages show what is now in the file.
+    /// </summary>
     public event EventHandler? ConfigurationChanged;
 
     public event EventHandler? BusyChanged;
@@ -90,6 +99,7 @@ public sealed class AppState
             }
 
             LogMessage($"Saved {ConfigPath}.");
+            ConfigurationChanged?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex)
         {
