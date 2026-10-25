@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="DevWorkspaceLauncher.WinUI.Pages.LogPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Padding="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <TextBlock Text="Activity log" Style="{StaticResource TitleTextBlockStyle}" Margin="0,0,0,12" />
+        <ListView
+            x:Name="Lines"
+            Grid.Row="1"
+            SelectionMode="None"
+            FontFamily="Consolas"
+            FontSize="12"
+            BorderThickness="1"
+            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+            CornerRadius="4">
+            <ListView.ItemContainerStyle>
+                <Style TargetType="ListViewItem">
+                    <Setter Property="MinHeight" Value="20" />
+                    <Setter Property="Padding" Value="8,0" />
+                </Style>
+            </ListView.ItemContainerStyle>
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="x:String">
+                    <TextBlock Text="{x:Bind}" IsTextSelectionEnabled="True" TextWrapping="NoWrap" />
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+    </Grid>
+</Page>

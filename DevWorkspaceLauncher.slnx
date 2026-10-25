@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/DevWorkspaceLauncher.Core/DevWorkspaceLauncher.Core.csproj" />
     <Project Path="src/DevWorkspaceLauncher.WinForms/DevWorkspaceLauncher.WinForms.csproj" />
+    <Project Path="src/DevWorkspaceLauncher.WinUI/DevWorkspaceLauncher.WinUI.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/DevWorkspaceLauncher.Core.Tests/DevWorkspaceLauncher.Core.Tests.csproj" />
