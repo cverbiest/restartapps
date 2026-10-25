@@ -280,3 +280,88 @@ internal static class ShortcutResolver
         }
     }
 }
+
+/// <summary>
+/// Keeps this process's environment in step with the registry, the way Explorer does.
+/// <para>
+/// A process copies its parent's environment once, at start-up, and never looks again. Without this,
+/// everything launched from here would keep the PATH from the moment the app started, missing whatever
+/// an installer has added since. Explorer avoids that by rebuilding its environment when an installer
+/// broadcasts WM_SETTINGCHANGE "Environment"; <see cref="Refresh"/> does the same.
+/// </para>
+/// </summary>
+internal static class UserEnvironment
+{
+    public const int WM_SETTINGCHANGE = 0x001A;
+
+    [DllImport("userenv.dll", SetLastError = true)]
+    private static extern bool CreateEnvironmentBlock(out IntPtr environment, IntPtr token, bool inherit);
+
+    [DllImport("userenv.dll", SetLastError = true)]
+    private static extern bool DestroyEnvironmentBlock(IntPtr environment);
+
+    /// <summary>True when a WM_SETTINGCHANGE message announces an environment change.</summary>
+    public static bool IsEnvironmentChange(Message message) =>
+        message.Msg == WM_SETTINGCHANGE
+        && message.LParam != IntPtr.Zero
+        && Marshal.PtrToStringUni(message.LParam) == "Environment";
+
+    /// <summary>
+    /// Overwrites this process's variables with the current system and user values. Variables only this
+    /// process has are left alone, as Explorer does.
+    /// </summary>
+    public static void Refresh()
+    {
+        foreach (var (name, value) in Load())
+        {
+            Environment.SetEnvironmentVariable(name, value);
+        }
+    }
+
+    /// <summary>The environment a fresh logon would get now: system and user variables, expanded and merged.</summary>
+    public static Dictionary<string, string> Load()
+    {
+        using var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+        if (!CreateEnvironmentBlock(out var block, identity.Token, inherit: false))
+        {
+            throw new System.ComponentModel.Win32Exception();
+        }
+
+        try
+        {
+            return ParseBlock(ReadBlock(block));
+        }
+        finally
+        {
+            DestroyEnvironmentBlock(block);
+        }
+    }
+
+    /// <summary>Parses a block of "name=value" strings, each ending in a NUL, the whole ending in an extra NUL.</summary>
+    public static Dictionary<string, string> ParseBlock(string block)
+    {
+        var variables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var entry in block.Split('\0', StringSplitOptions.RemoveEmptyEntries))
+        {
+            // Entries starting with '=' are the hidden per-drive current directories, not variables.
+            var separator = entry.IndexOf('=', 1);
+            if (entry[0] != '=' && separator > 0)
+            {
+                variables[entry[..separator]] = entry[(separator + 1)..];
+            }
+        }
+
+        return variables;
+    }
+
+    private static string ReadBlock(IntPtr block)
+    {
+        var length = 0;
+        while (Marshal.ReadInt16(block, length * 2) != 0 || Marshal.ReadInt16(block, (length + 1) * 2) != 0)
+        {
+            length++;
+        }
+
+        return Marshal.PtrToStringUni(block, length + 1);
+    }
+}

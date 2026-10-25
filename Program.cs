@@ -1691,6 +1691,24 @@ internal sealed class RestartAppsForm : KryptonForm
 
     // ------------------------------------------------------------------ misc
 
+    protected override void WndProc(ref Message m)
+    {
+        if (UserEnvironment.IsEnvironmentChange(m))
+        {
+            try
+            {
+                UserEnvironment.Refresh();
+                LogMessage("Environment variables changed; apps started from now on get the new values.");
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"Failed to reload environment variables: {ex.Message}");
+            }
+        }
+
+        base.WndProc(ref m);
+    }
+
     private void LogMessage(string message)
     {
         _txtLog.AppendText($"{DateTime.Now:HH:mm:ss}: {message}{Environment.NewLine}");
