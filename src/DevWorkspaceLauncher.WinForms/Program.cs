@@ -681,46 +681,17 @@ internal sealed class MainForm : KryptonForm
 
     // --------------------------------------------------------------- profiles
 
-    private Profile? SelectedProfile()
-    {
-        return _profiles.SelectedItem is string name
-            ? _config.Profiles.FirstOrDefault(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase))
-            : null;
-    }
+    private Profile? SelectedProfile() => ProfileOperations.Find(_config.Profiles, _profiles.SelectedItem as string);
 
     private List<ProfileEntry> CaptureEntries()
     {
         _grid.EndEdit();
-        return _visible
-            .Select(app => new ProfileEntry { Name = app.Name, Kill = app.Kill, Restart = app.Restart })
-            .ToList();
+        return ProfileOperations.Capture(_visible);
     }
 
     private void ApplyProfile(Profile profile)
     {
-        var entries = new Dictionary<string, ProfileEntry>(StringComparer.OrdinalIgnoreCase);
-        foreach (var entry in profile.Entries)
-        {
-            entries[entry.Name] = entry;
-        }
-
-        var unknown = 0;
-        foreach (var app in _visible)
-        {
-            if (entries.TryGetValue(app.Name, out var entry))
-            {
-                app.Kill = entry.Kill && app.CanStop;
-                app.Restart = entry.Restart;
-            }
-            else
-            {
-                // An app the profile has never seen is left alone rather than acted on.
-                app.Kill = false;
-                app.Restart = false;
-                unknown++;
-            }
-        }
-
+        var unknown = ProfileOperations.Apply(profile, _visible);
         _visible.ResetBindings();
 
         var suffix = unknown == 0 ? string.Empty : $" ({unknown} app(s) not in the profile were cleared)";
@@ -841,10 +812,6 @@ internal sealed class MainForm : KryptonForm
 
     // --------------------------------------------------------------- restart
 
-    private List<AppConfiguration> AppsToStart() => _visible.Where(app => app.Restart).ToList();
-
-    private List<AppConfiguration> AppsToKill() => _visible.Where(app => app.Kill && app.CanStop).ToList();
-
     private async void RestartButton_Click(object? sender, EventArgs e)
     {
         await RestartAppsAsync(stopOnlySelected: false);
@@ -863,137 +830,16 @@ internal sealed class MainForm : KryptonForm
         }
 
         _grid.EndEdit();
-
-        var appsToStart = AppsToStart();
-        var appsToStop = stopOnlySelected
-            ? appsToStart.Where(app => app.CanStop).ToList()
-            : AppsToKill();
-
-        if (appsToStop.Count == 0 && appsToStart.Count == 0)
-        {
-            LogMessage(stopOnlySelected
-                ? "No applications selected."
-                : "Nothing to do: no application is ticked Kill or Restart.");
-            return;
-        }
-
         SetBusy(true);
 
         try
         {
-            if (appsToStop.Count == 0)
-            {
-                LogMessage("Nothing to stop.");
-            }
-            else
-            {
-                LogMessage(stopOnlySelected ? "STOPPING selected applications..." : "STOPPING applications...");
-                foreach (var app in appsToStop)
-                {
-                    await StopAppAsync(app);
-                }
-
-                await Task.Delay(TimeSpan.FromSeconds(1));
-            }
-
-            if (appsToStart.Count == 0)
-            {
-                LogMessage("No applications ticked Restart; nothing to start.");
-            }
-            else
-            {
-                LogMessage("STARTING selected applications...");
-                foreach (var app in appsToStart)
-                {
-                    LogMessage($"Starting {app.Name}...");
-                    try
-                    {
-                        StartCommand(app.ExpandedCommandline);
-                    }
-                    catch (Exception ex)
-                    {
-                        LogMessage($"Failed to start {app.Name}: {ex.Message}");
-                    }
-                }
-            }
-
-            LogMessage("Operation Complete.");
-        }
-        catch (Exception ex)
-        {
-            LogMessage($"Error: {ex.Message}");
+            await AppController.KillAndStartAsync(_visible.ToList(), stopOnlySelected, LogMessage);
         }
         finally
         {
             SetBusy(false);
         }
-    }
-
-    private async Task StopAppAsync(AppConfiguration app)
-    {
-        switch (app.StopMethod)
-        {
-            case StopMethod.None:
-                LogMessage($"Skipping {app.Name}: StopMethod is None.");
-                return;
-
-            case StopMethod.Window:
-                await CloseWindowsAsync(app);
-                return;
-
-            default:
-                var processName = CommandLineParser.GetProcessName(app.ExpandedCommandline);
-                if (string.IsNullOrWhiteSpace(processName))
-                {
-                    LogMessage($"Skipping {app.Name}: no executable found in the command line.");
-                    return;
-                }
-
-                LogMessage($"Stopping {app.Name} ({processName})...");
-                StopProcesses(processName);
-                return;
-        }
-    }
-
-    /// <summary>
-    /// Closes the windows matching the app's AppUserModelID. Used for browser-hosted PWAs, which
-    /// share their process with every other window of that browser.
-    /// </summary>
-    private async Task CloseWindowsAsync(AppConfiguration app)
-    {
-        if (string.IsNullOrWhiteSpace(app.WindowAumid))
-        {
-            LogMessage($"Skipping {app.Name}: StopMethod is Window but WindowAumid is not set.");
-            return;
-        }
-
-        var windows = WindowFinder.FindByAumid(app.WindowAumid);
-        if (windows.Count == 0)
-        {
-            LogMessage($"{app.Name}: no window matching '{app.WindowAumid}' is open.");
-            return;
-        }
-
-        LogMessage($"Closing {app.Name} ({windows.Count} window(s) matching '{app.WindowAumid}')...");
-        foreach (var window in windows)
-        {
-            WindowFinder.Close(window.Handle);
-        }
-
-        // Give the app a moment to take the close down cleanly.
-        for (var attempt = 0; attempt < 20; attempt++)
-        {
-            if (windows.All(window => !WindowFinder.StillOpen(window.Handle)))
-            {
-                LogMessage($"{app.Name}: closed.");
-                return;
-            }
-
-            await Task.Delay(150);
-        }
-
-        var remaining = windows.Count(window => WindowFinder.StillOpen(window.Handle));
-        LogMessage($"{app.Name}: {remaining} window(s) did not close within 3 seconds.");
     }
 
     private void SetBusy(bool busy)
@@ -1011,39 +857,7 @@ internal sealed class MainForm : KryptonForm
 
     // ------------------------------------------------------------------ edit
 
-    private void EditButton_Click(object? sender, EventArgs e)
-    {
-        var path = AppConfigurationStore.FilePath;
-        if (!File.Exists(path))
-        {
-            LogMessage($"Configuration file not found: {path}");
-            return;
-        }
-
-        try
-        {
-            Process.Start(new ProcessStartInfo { FileName = path, UseShellExecute = true });
-            LogMessage($"Opened {path} in the default editor.");
-        }
-        catch (Exception ex)
-        {
-            // No association for .json - fall back to Notepad.
-            try
-            {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = "notepad.exe",
-                    Arguments = $"\"{path}\"",
-                    UseShellExecute = true
-                });
-                LogMessage($"Opened {path} in Notepad.");
-            }
-            catch (Exception fallbackEx)
-            {
-                LogMessage($"Failed to open configuration: {ex.Message} / {fallbackEx.Message}");
-            }
-        }
-    }
+    private void EditButton_Click(object? sender, EventArgs e) => ConfigFileOpener.Open(AppConfigurationStore.FilePath, LogMessage);
 
     // --------------------------------------------------------------- watcher
 
@@ -1150,81 +964,18 @@ internal sealed class MainForm : KryptonForm
 
         _grid.EndEdit();
 
-        var added = new List<AppConfiguration>();
-
-        foreach (var path in paths)
-        {
-            var app = CreateEntry(path);
-            if (app is null)
-            {
-                continue;
-            }
-
-            var isDuplicate = _config.Apps.Concat(added).Any(existing =>
-                string.Equals(existing.Name, app.Name, StringComparison.OrdinalIgnoreCase));
-            if (isDuplicate)
-            {
-                LogMessage($"{app.Name} is already in the configuration.");
-                continue;
-            }
-
-            added.Add(app);
-            LogMessage($"Added {app.Name}: {app.Commandline}");
-        }
-
+        var added = DroppedApps.Add(_config, paths, LogMessage);
         if (added.Count == 0)
         {
             return;
         }
 
-        _config.Apps.AddRange(added);
         foreach (var app in added)
         {
             _visible.Add(app);
         }
 
         SaveConfiguration();
-    }
-
-    private AppConfiguration? CreateEntry(string path)
-    {
-        if (Directory.Exists(path))
-        {
-            LogMessage($"Ignoring folder: {path}");
-            return null;
-        }
-
-        if (!File.Exists(path))
-        {
-            LogMessage($"Ignoring missing file: {path}");
-            return null;
-        }
-
-        var name = Path.GetFileNameWithoutExtension(path);
-        var commandline = $"\"{path}\"";
-
-        if (string.Equals(Path.GetExtension(path), ".lnk", StringComparison.OrdinalIgnoreCase))
-        {
-            var (target, arguments) = ShortcutResolver.Resolve(path);
-            if (string.IsNullOrWhiteSpace(target))
-            {
-                LogMessage($"Could not resolve shortcut {Path.GetFileName(path)}; using the shortcut itself.");
-            }
-            else
-            {
-                commandline = string.IsNullOrWhiteSpace(arguments)
-                    ? $"\"{target}\""
-                    : $"\"{target}\" {arguments.Trim()}";
-            }
-        }
-
-        return new AppConfiguration
-        {
-            Name = name,
-            Commandline = commandline,
-            Kill = true,
-            Restart = true
-        };
     }
 
     // ------------------------------------------------------------ workspaces
@@ -1721,36 +1472,6 @@ internal sealed class MainForm : KryptonForm
         Refresh();
     }
 
-    private static void StopProcesses(string processName)
-    {
-        foreach (var process in Process.GetProcessesByName(processName))
-        {
-            try
-            {
-                process.Kill(entireProcessTree: true);
-            }
-            catch
-            {
-                // Match the PowerShell prototype's SilentlyContinue behavior.
-            }
-            finally
-            {
-                process.Dispose();
-            }
-        }
-    }
-
-    private static void StartCommand(string commandline)
-    {
-        Process.Start(new ProcessStartInfo
-        {
-            FileName = "cmd.exe",
-            Arguments = $"/c start \"\" {commandline}",
-            WindowStyle = ProcessWindowStyle.Hidden,
-            CreateNoWindow = true,
-            UseShellExecute = false
-        });
-    }
 }
 
 /// <summary>Small modal text prompt, used for naming profiles.</summary>
