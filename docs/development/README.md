@@ -51,5 +51,15 @@ ReadyToRun win-x64 build. The publish settings live in the project file, so that
 
 ## Configuration
 
+`ConfigurationLocator` picks the file, in this order:
+
+1. `devworkspacelauncher.json` next to the executable - a portable override, and the way to run a
+   development build against a test configuration without touching your real one.
+2. `%APPDATA%\DevWorkspaceLauncher\devworkspacelauncher.json` - the shared default, so both apps
+   read and write the same file.
+3. If neither exists: the first `restartapps.json` (pre-rename name) next to the executable or in the
+   current directory is copied to location 2 and kept. Otherwise an empty configuration is written
+   there. `AppConfigurationStore.EnsureExists()` does this at startup and returns a log line.
+
 `devworkspacelauncher.example.json` at the root is an example. It is not copied to the build output.
 Machine-specific files called `*.local.json` are git-ignored.

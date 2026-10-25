@@ -176,8 +176,11 @@ refuse. Nothing is force-killed by this method.
 
 ## Configuration
 
-`restartapps.json` sits next to the executable (or in the current directory). The current layout is
-an object with `Apps`, `Profiles` and `Workspaces`; a bare array of applications (the original
+The configuration is `%APPDATA%\DevWorkspaceLauncher\devworkspacelauncher.json`, shared by every
+copy of the app. A `devworkspacelauncher.json` next to the executable takes precedence, for a
+portable copy. On first start, if neither exists, a `restartapps.json` from before the rename (next
+to the executable or in the current directory) is copied to the shared location and left in place;
+otherwise an empty configuration is created. The current layout is an object with `Apps`, `Profiles` and `Workspaces`; a bare array of applications (the original
 format) is still read and is upgraded to the new layout the next time the file is saved.
 
 ```json
@@ -257,9 +260,8 @@ Add `"VsCodeExecutable": "..."` at the top level if VS Code is not in one of the
 otherwise `%LOCALAPPDATA%\Programs\Microsoft VS Code`, `%ProgramFiles%\Microsoft VS Code` and
 `code.cmd` on `PATH` are tried in that order.
 
-Comments and trailing commas are tolerated. The file shipped in this repository is an example —
-edit it to match your own machine. Anything machine-specific you do not want to commit can go in a
-`restartapps.local.json`, which is git-ignored.
+Comments and trailing commas are tolerated. `devworkspacelauncher.example.json` in this repository
+is an example to copy from.
 
 ## Build and run (.NET version)
 

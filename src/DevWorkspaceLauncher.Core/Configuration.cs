@@ -140,16 +140,45 @@ public static class AppConfigurationStore
 
     private static readonly JsonSerializerOptions WriteOptions = new() { WriteIndented = true };
 
-    public static string FilePath { get; } = FindConfigFile();
+    private static readonly ConfigurationLocation Location = ConfigurationLocator.ResolveForCurrentProcess();
 
-    public static ConfigurationSnapshot Load()
+    public static string FilePath => Location.Path;
+
+    /// <summary>
+    /// Makes sure <see cref="FilePath"/> exists, migrating the pre-rename file or starting an empty one.
+    /// Returns a line for the log when it did either, null when the file was already there.
+    /// </summary>
+    public static string? EnsureExists() => EnsureExists(Location);
+
+    internal static string? EnsureExists(ConfigurationLocation location)
     {
-        if (!File.Exists(FilePath))
+        if (File.Exists(location.Path))
         {
-            throw new FileNotFoundException($"Configuration file not found: {FilePath}", FilePath);
+            return null;
         }
 
-        var json = File.ReadAllText(FilePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(location.Path)!);
+
+        if (location.MigrateFrom is not null)
+        {
+            File.Copy(location.MigrateFrom, location.Path, overwrite: false);
+            return $"Migrated configuration from {location.MigrateFrom} to {location.Path}.";
+        }
+
+        File.WriteAllText(location.Path, ToJson(new ConfigurationFile()));
+        return $"Created a new configuration at {location.Path}.";
+    }
+
+    public static ConfigurationSnapshot Load() => Load(FilePath);
+
+    public static ConfigurationSnapshot Load(string path)
+    {
+        if (!File.Exists(path))
+        {
+            throw new FileNotFoundException($"Configuration file not found: {path}", path);
+        }
+
+        var json = File.ReadAllText(path);
         var configuration = Parse(json);
 
         foreach (var app in configuration.Apps)
@@ -194,17 +223,5 @@ public static class AppConfigurationStore
     public static string ToJson(ConfigurationFile configuration)
     {
         return JsonSerializer.Serialize(configuration, WriteOptions);
-    }
-
-    private static string FindConfigFile()
-    {
-        var executableConfig = Path.Combine(AppContext.BaseDirectory, AppIdentity.ConfigFileName);
-        if (File.Exists(executableConfig))
-        {
-            return executableConfig;
-        }
-
-        var currentDirectoryConfig = Path.Combine(Environment.CurrentDirectory, AppIdentity.ConfigFileName);
-        return File.Exists(currentDirectoryConfig) ? currentDirectoryConfig : executableConfig;
     }
 }

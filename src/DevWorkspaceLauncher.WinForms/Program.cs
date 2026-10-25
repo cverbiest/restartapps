@@ -16,7 +16,8 @@ internal static class Program
 
         try
         {
-            Application.Run(new MainForm(AppConfigurationStore.Load()));
+            var setupMessage = AppConfigurationStore.EnsureExists();
+            Application.Run(new MainForm(AppConfigurationStore.Load(), setupMessage));
         }
         catch (Exception ex)
         {
@@ -71,7 +72,7 @@ internal sealed class MainForm : KryptonForm
     private bool _dropTargetsEnabled;
     private bool _busy;
 
-    public MainForm(ConfigurationSnapshot snapshot)
+    public MainForm(ConfigurationSnapshot snapshot, string? setupMessage = null)
     {
         _config = snapshot.Configuration;
         _lastKnownJson = snapshot.Json;
@@ -157,6 +158,11 @@ internal sealed class MainForm : KryptonForm
         Shown += (_, _) =>
         {
             Activate();
+            if (setupMessage is not null)
+            {
+                LogMessage(setupMessage);
+            }
+
             EnableDropTarget(this);
             _dropTargetsEnabled = true;
             StartWatchingConfiguration();
