@@ -58,3 +58,6 @@ NuGet.local.config
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# Brainstorming companion mockups
+.superpowers/
