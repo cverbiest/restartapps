@@ -3,9 +3,9 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace RestartApps;
+namespace DevWorkspaceLauncher;
 
-internal static class CommandLineParser
+public static class CommandLineParser
 {
     public static string GetProcessName(string commandline)
     {
@@ -47,7 +47,7 @@ internal static class CommandLineParser
 /// a distinct AppUserModelID, so closing exactly those windows leaves the rest of the browser alone.
 /// </para>
 /// </summary>
-internal static class WindowFinder
+public static class WindowFinder
 {
     private const uint WM_CLOSE = 0x0010;
 
@@ -251,7 +251,7 @@ internal static class WindowFinder
 }
 
 /// <summary>Reads the target and arguments out of a .lnk file through the Windows Script Host COM object.</summary>
-internal static class ShortcutResolver
+public static class ShortcutResolver
 {
     public static (string Target, string Arguments) Resolve(string shortcutPath)
     {
@@ -290,9 +290,9 @@ internal static class ShortcutResolver
 /// broadcasts WM_SETTINGCHANGE "Environment"; <see cref="Refresh"/> does the same.
 /// </para>
 /// </summary>
-internal static class UserEnvironment
+public static class UserEnvironment
 {
-    public const int WM_SETTINGCHANGE = 0x001A;
+    public const uint WM_SETTINGCHANGE = 0x001A;
 
     [DllImport("userenv.dll", SetLastError = true)]
     private static extern bool CreateEnvironmentBlock(out IntPtr environment, IntPtr token, bool inherit);
@@ -301,10 +301,10 @@ internal static class UserEnvironment
     private static extern bool DestroyEnvironmentBlock(IntPtr environment);
 
     /// <summary>True when a WM_SETTINGCHANGE message announces an environment change.</summary>
-    public static bool IsEnvironmentChange(Message message) =>
-        message.Msg == WM_SETTINGCHANGE
-        && message.LParam != IntPtr.Zero
-        && Marshal.PtrToStringUni(message.LParam) == "Environment";
+    public static bool IsEnvironmentChange(uint message, IntPtr lParam) =>
+        message == WM_SETTINGCHANGE
+        && lParam != IntPtr.Zero
+        && Marshal.PtrToStringUni(lParam) == "Environment";
 
     /// <summary>
     /// Overwrites this process's variables with the current system and user values. Variables only this

@@ -5,6 +5,8 @@
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>DevWorkspaceLauncher.WinForms</AssemblyName>
+    <RootNamespace>DevWorkspaceLauncher</RootNamespace>
 
     <!-- Publish settings live here rather than on the command line, so a bare `dotnet publish`
          produces the format we actually want. ReadyToRun precompiles the IL in the publish folder -
@@ -17,23 +19,13 @@
     <PublishReadyToRun>true</PublishReadyToRun>
     <!-- The SDK derives PublishDir separately, and would still slip win-x64 into it. -->
     <PublishDir>bin\$(Configuration)\$(TargetFramework)\publish\</PublishDir>
-    <!-- This project sits in the repository root, so its wildcards would otherwise swallow the
-         test project that lives in a subdirectory. -->
-    <DefaultItemExcludes>$(DefaultItemExcludes);RestartApps.Tests\**</DefaultItemExcludes>
   </PropertyGroup>
 
-  <ItemGroup>
-    <None Update="restartapps.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Krypton.Toolkit" Version="105.26.4.110" />
     <PackageReference Include="Krypton.Navigator" Version="105.26.4.110" />
   </ItemGroup>
   <ItemGroup>
-    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
-      <_Parameter1>RestartApps.Tests</_Parameter1>
-    </AssemblyAttribute>
+    <ProjectReference Include="..\DevWorkspaceLauncher.Core\DevWorkspaceLauncher.Core.csproj" />
   </ItemGroup>
 </Project>

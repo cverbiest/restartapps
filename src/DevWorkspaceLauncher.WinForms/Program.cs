@@ -3,7 +3,7 @@ using System.Diagnostics;
 using Krypton.Navigator;
 using Krypton.Toolkit;
 
-namespace RestartApps;
+namespace DevWorkspaceLauncher;
 
 internal static class Program
 {
@@ -16,7 +16,7 @@ internal static class Program
 
         try
         {
-            Application.Run(new RestartAppsForm(AppConfigurationStore.Load()));
+            Application.Run(new MainForm(AppConfigurationStore.Load()));
         }
         catch (Exception ex)
         {
@@ -29,7 +29,7 @@ internal static class Program
     }
 }
 
-internal sealed class RestartAppsForm : KryptonForm
+internal sealed class MainForm : KryptonForm
 {
     private ConfigurationFile _config;
 
@@ -71,12 +71,12 @@ internal sealed class RestartAppsForm : KryptonForm
     private bool _dropTargetsEnabled;
     private bool _busy;
 
-    public RestartAppsForm(ConfigurationSnapshot snapshot)
+    public MainForm(ConfigurationSnapshot snapshot)
     {
         _config = snapshot.Configuration;
         _lastKnownJson = snapshot.Json;
 
-        Text = "Restart Apps";
+        Text = AppIdentity.DisplayName;
         MinimumSize = new Size(660, 788);
         Size = new Size(740, 888);
         StartPosition = FormStartPosition.CenterScreen;
@@ -178,7 +178,7 @@ internal sealed class RestartAppsForm : KryptonForm
         var title = new KryptonLabel
         {
             Dock = DockStyle.Top,
-            Text = "Restart Apps",
+            Text = AppIdentity.DisplayName,
             Values =
             {
                 ExtraText = "Tick Kill to stop an app, Restart to start it again.\nDrop an executable or shortcut here to add it."
@@ -1693,7 +1693,7 @@ internal sealed class RestartAppsForm : KryptonForm
 
     protected override void WndProc(ref Message m)
     {
-        if (UserEnvironment.IsEnvironmentChange(m))
+        if (UserEnvironment.IsEnvironmentChange((uint)m.Msg, m.LParam))
         {
             try
             {

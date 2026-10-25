@@ -1,10 +1,10 @@
 using System.Diagnostics;
 using System.Text.Json;
 
-namespace RestartApps;
+namespace DevWorkspaceLauncher;
 
 /// <summary>Whether an entry is a plain folder or a .code-workspace file.</summary>
-internal enum WorkspaceKind
+public enum WorkspaceKind
 {
     Folder,
     WorkspaceFile
@@ -15,7 +15,7 @@ internal enum WorkspaceKind
 /// <param name="Uri">The URI exactly as VS Code stored it; this is what gets handed back to VS Code.</param>
 /// <param name="Location">A local path, or a remote label such as "SSH: host".</param>
 /// <param name="LastUsed">The storage directory's last write time, which is when it was last opened.</param>
-internal sealed record VsCodeWorkspace(
+public sealed record VsCodeWorkspace(
     string Id,
     string Uri,
     WorkspaceKind Kind,
@@ -28,7 +28,7 @@ internal sealed record VsCodeWorkspace(
 /// remote authority carries percent-escaped '+' separators that the framework parser does not
 /// unescape consistently.
 /// </summary>
-internal static class VsCodeUri
+public static class VsCodeUri
 {
     private const string WorkspaceExtension = ".code-workspace";
 
@@ -133,7 +133,7 @@ internal static class VsCodeUri
 /// it was last opened. That is used instead of the recent-paths list in state.vscdb, which is a
 /// SQLite database and is not present on every installation.
 /// </summary>
-internal static class VsCodeWorkspaces
+public static class VsCodeWorkspaces
 {
     public static string DefaultStorageRoot { get; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -282,7 +282,7 @@ internal static class VsCodeWorkspaces
 /// has open by focusing that window instead of opening a second one, so the same command serves both
 /// the Launch and the Focus button.
 /// </summary>
-internal static class VsCodeLauncher
+public static class VsCodeLauncher
 {
     public static string BuildArguments(string uri, WorkspaceKind kind)
     {
@@ -365,7 +365,7 @@ internal static class VsCodeLauncher
 }
 
 /// <summary>One line of the Workspaces grid.</summary>
-internal sealed class WorkspaceRow
+public sealed class WorkspaceRow
 {
     public required string Uri { get; init; }
 
@@ -390,7 +390,7 @@ internal sealed class WorkspaceRow
 }
 
 /// <summary>Why a close attempt did or did not act.</summary>
-internal enum WindowMatch
+public enum WindowMatch
 {
     /// <summary>Exactly one window matched, which is the only case in which anything is closed.</summary>
     Single,
@@ -407,7 +407,7 @@ internal enum WindowMatch
 /// AppUserModelID, so the title is the only thing that tells them apart - and the title is whatever
 /// window.title makes it. Matching therefore refuses to guess: it acts only on a single match.
 /// </summary>
-internal static class VsCodeWindows
+public static class VsCodeWindows
 {
     /// <summary>
     /// Picks the window for a workspace out of the open VS Code titles.
@@ -461,7 +461,7 @@ internal static class VsCodeWindows
 }
 
 /// <summary>Decides which workspaces the grid shows and in which order.</summary>
-internal static class WorkspaceRows
+public static class WorkspaceRows
 {
     public static List<WorkspaceRow> Build(
         IReadOnlyList<VsCodeWorkspace> discovered,

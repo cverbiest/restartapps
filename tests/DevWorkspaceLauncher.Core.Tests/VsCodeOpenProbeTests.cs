@@ -1,4 +1,4 @@
-namespace RestartApps.Tests;
+namespace DevWorkspaceLauncher.Tests;
 
 public class VsCodeOpenProbeTests : IDisposable
 {

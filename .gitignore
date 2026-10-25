@@ -26,7 +26,7 @@ publish/
 packages/
 
 # Local / machine-specific configuration
-restartapps.local.json
+devworkspacelauncher.local.json
 *.local.json
 appsettings.*.local.json
 

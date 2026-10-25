@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DevWorkspaceLauncher.Core/DevWorkspaceLauncher.Core.csproj" />
+    <Project Path="src/DevWorkspaceLauncher.WinForms/DevWorkspaceLauncher.WinForms.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DevWorkspaceLauncher.Core.Tests/DevWorkspaceLauncher.Core.Tests.csproj" />
+  </Folder>
+</Solution>

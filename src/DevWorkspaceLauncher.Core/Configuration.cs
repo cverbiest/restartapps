@@ -1,10 +1,10 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace RestartApps;
+namespace DevWorkspaceLauncher;
 
 /// <summary>How an application is stopped.</summary>
-internal enum StopMethod
+public enum StopMethod
 {
     /// <summary>Kill every process whose executable name matches the command line.</summary>
     Process,
@@ -17,7 +17,7 @@ internal enum StopMethod
 }
 
 /// <summary>Case-insensitive so the configuration file can say "window" or "Window".</summary>
-internal sealed class StopMethodConverter : JsonConverter<StopMethod>
+public sealed class StopMethodConverter : JsonConverter<StopMethod>
 {
     public override StopMethod Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
@@ -36,7 +36,7 @@ internal sealed class StopMethodConverter : JsonConverter<StopMethod>
     }
 }
 
-internal sealed class AppConfiguration
+public sealed class AppConfiguration
 {
     public required string Name { get; set; }
 
@@ -71,13 +71,13 @@ internal sealed class AppConfiguration
 }
 
 /// <summary>A named set of Kill/Restart ticks.</summary>
-internal sealed class Profile
+public sealed class Profile
 {
     public required string Name { get; set; }
     public List<ProfileEntry> Entries { get; set; } = [];
 }
 
-internal sealed class ProfileEntry
+public sealed class ProfileEntry
 {
     public required string Name { get; set; }
     public bool Kill { get; set; }
@@ -85,7 +85,7 @@ internal sealed class ProfileEntry
 }
 
 /// <summary>A VS Code workspace or folder kept on the Workspaces tab.</summary>
-internal sealed class WorkspaceFavorite
+public sealed class WorkspaceFavorite
 {
     /// <summary>Shown in the grid. Seeded from the workspace's own name and editable in the file.</summary>
     public required string Name { get; set; }
@@ -103,7 +103,7 @@ internal sealed class WorkspaceFavorite
 }
 
 /// <summary>A named set of workspaces to open together. Opening only: profiles never close a window.</summary>
-internal sealed class WorkspaceProfile
+public sealed class WorkspaceProfile
 {
     public required string Name { get; set; }
 
@@ -111,7 +111,7 @@ internal sealed class WorkspaceProfile
     public List<string> Workspaces { get; set; } = [];
 }
 
-internal sealed class ConfigurationFile
+public sealed class ConfigurationFile
 {
     public List<AppConfiguration> Apps { get; set; } = [];
     public List<Profile> Profiles { get; set; } = [];
@@ -127,9 +127,9 @@ internal sealed class ConfigurationFile
     public string? VsCodeExecutable { get; set; }
 }
 
-internal sealed record ConfigurationSnapshot(ConfigurationFile Configuration, string Json);
+public sealed record ConfigurationSnapshot(ConfigurationFile Configuration, string Json);
 
-internal static class AppConfigurationStore
+public static class AppConfigurationStore
 {
     private static readonly JsonSerializerOptions ReadOptions = new()
     {
@@ -164,7 +164,7 @@ internal static class AppConfigurationStore
         return new ConfigurationSnapshot(configuration, json);
     }
 
-    internal static ConfigurationFile Parse(string json)
+    public static ConfigurationFile Parse(string json)
     {
         using var document = JsonDocument.Parse(json, new JsonDocumentOptions
         {
@@ -191,20 +191,20 @@ internal static class AppConfigurationStore
         return json;
     }
 
-    internal static string ToJson(ConfigurationFile configuration)
+    public static string ToJson(ConfigurationFile configuration)
     {
         return JsonSerializer.Serialize(configuration, WriteOptions);
     }
 
     private static string FindConfigFile()
     {
-        var executableConfig = Path.Combine(AppContext.BaseDirectory, "restartapps.json");
+        var executableConfig = Path.Combine(AppContext.BaseDirectory, AppIdentity.ConfigFileName);
         if (File.Exists(executableConfig))
         {
             return executableConfig;
         }
 
-        var currentDirectoryConfig = Path.Combine(Environment.CurrentDirectory, "restartapps.json");
+        var currentDirectoryConfig = Path.Combine(Environment.CurrentDirectory, AppIdentity.ConfigFileName);
         return File.Exists(currentDirectoryConfig) ? currentDirectoryConfig : executableConfig;
     }
 }

@@ -2,10 +2,10 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0-windows</TargetFramework>
-    <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <RootNamespace>DevWorkspaceLauncher.Tests</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\RestartApps.csproj" />
+    <ProjectReference Include="..\..\src\DevWorkspaceLauncher.Core\DevWorkspaceLauncher.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

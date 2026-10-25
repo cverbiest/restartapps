@@ -5,8 +5,8 @@ you select — handy after a VPN change, a docking-station reconnect, or when tr
 
 Two implementations are included:
 
-- **`Program.cs` / `Configuration.cs` / `Native.cs`** — a .NET 10 WinForms app
-  (`RestartApps.csproj`), themed with the
+- **`src/DevWorkspaceLauncher.WinForms`** on top of **`src/DevWorkspaceLauncher.Core`** — a .NET 10
+  WinForms app, themed with the
   [Krypton Toolkit](https://github.com/Krypton-Suite/Standard-Toolkit). This is the current version.
 - **`RestartApps.ps1`** — the original PowerShell/WinForms prototype, kept for reference and for
   machines where you would rather not build anything.
@@ -266,27 +266,24 @@ edit it to match your own machine. Anything machine-specific you do not want to 
 Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download) on Windows.
 
 ```powershell
-dotnet run
+dotnet run --project src/DevWorkspaceLauncher.WinForms
 ```
 
 To produce a standalone build:
 
 ```powershell
-dotnet publish -c Release
+dotnet publish src/DevWorkspaceLauncher.WinForms -c Release
 ```
 
-The publish options live in `RestartApps.csproj`, not on the command line, so that plain command is
-the whole story. It produces a framework-dependent, ReadyToRun win-x64 build in
-`bin\Release\net10.0-windows\publish`. ReadyToRun precompiles the IL ahead of time - the Krypton
+The publish options live in `DevWorkspaceLauncher.WinForms.csproj`, not on the command line, so that
+plain command is the whole story. It produces a framework-dependent, ReadyToRun win-x64 build in
+`src\DevWorkspaceLauncher.WinForms\bin\Release\net10.0-windows\publish`. ReadyToRun precompiles the IL ahead of time - the Krypton
 assemblies as well as the app - which is what a cold start would otherwise spend its time JITting.
 It roughly doubles the size of the published folder, to about 23 MB, in exchange for that startup.
 
 Being framework-dependent, the published app needs the .NET 10 desktop runtime on the machine that
 runs it. Set `<SelfContained>true</SelfContained>` in the project file if you would rather carry the
 runtime along.
-
-`restartapps.json` is copied to the output directory as part of the build, but only when the copy
-already there is older - your edited configuration in the publish folder survives a republish.
 
 ## Run (PowerShell version)
 
@@ -307,8 +304,10 @@ powershell -ExecutionPolicy Bypass -File .\RestartApps.ps1
 ## Tests
 
 ```powershell
-dotnet test RestartApps.Tests
+dotnet test tests/DevWorkspaceLauncher.Core.Tests
 ```
+
+See [docs/development](docs/development/README.md) for how the projects fit together.
 
 Covers the workspace URI decoding, the storage scan, the open probe, executable resolution, the
 grid's row rules and configuration round-tripping. The WinForms layer is not unit tested.
