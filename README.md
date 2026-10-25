@@ -122,6 +122,25 @@ profile, and deliberately open-only: a session never closes anything.
 The session buttons live on the "One click sessions" row above the tabs, next to the profile
 buttons, so both sets stay reachable from either tab.
 
+### Activities
+
+An **activity** is one button for a piece of work: it starts, stops or restarts the apps linked to it
+and opens the VS Code workspaces linked to it, all in one click. Anything an activity does not list
+is left alone — unlike a profile, which clears every app it does not mention. That makes it possible
+to have buttons that only stop a few apps, next to buttons that start a whole working setup.
+
+| Item | Actions |
+| --- | --- |
+| App | **Start** — only if it is not already running (for a PWA: if no window with its `WindowAumid` is open). **Stop** — by its `StopMethod`. **Restart** — stop, then start. |
+| Workspace | **Open** — VS Code focuses it if it is already open. **Close** — asks the window to close, with the same one-matching-window rule as **Close Ticked**. |
+
+A run does all the stops and closes first, waits a second if anything was stopped, then does the
+starts and opens, each in the order listed. Items that cannot be done — an app name that is not in
+`Apps`, a disabled app, stopping an app whose `StopMethod` is `None` — are logged and skipped, and the
+rest of the run goes ahead. Activity buttons act at once, without confirmation.
+
+Activities are written in the configuration file (see below); there is no editor in the app yet.
+
 ### Live configuration reload (.NET version only)
 
 The configuration file is watched while the window is open. Saving it — from the **Edit Config**
@@ -255,6 +274,32 @@ Sessions live in `WorkspaceProfiles`, each a name and the URIs it opens:
     { "Name": "Linux dev", "Workspaces": [ "vscode-remote://ssh-remote%2Bcce-dev03/home/cvb/develop/develop.code-workspace" ] }
   ]
 ```
+
+Activities live in `Activities`:
+
+```jsonc
+  "Activities": [
+    {
+      "Name": "Docking",
+      "Apps": [
+        { "Name": "RDP Plus", "Action": "Restart" },
+        { "Name": "Outlook" }
+      ],
+      "Workspaces": [
+        { "Uri": "vscode-remote://ssh-remote%2Bcce-dev03/home/cvb/develop/develop.code-workspace" }
+      ]
+    },
+    { "Name": "Wind down", "Apps": [ { "Name": "Teams", "Action": "Stop" } ] }
+  ]
+```
+
+| Activity field | Meaning |
+| --- | --- |
+| `Name` | Shown on the activity's button. |
+| `Apps` | Optional. Each entry names an app from `Apps` (case-insensitive) and an `Action`: `Start` (default), `Stop` or `Restart`. |
+| `Workspaces` | Optional. Each entry has a workspace `Uri` and an `Action`: `Open` (default) or `Close`. The URI need not be on the preferred list; its `Name` and `WindowTitle` are used when it is. |
+
+Actions are case-insensitive.
 
 Add `"VsCodeExecutable": "..."` at the top level if VS Code is not in one of the usual places;
 otherwise `%LOCALAPPDATA%\Programs\Microsoft VS Code`, `%ProgramFiles%\Microsoft VS Code` and

@@ -16,25 +16,33 @@ public enum StopMethod
     None
 }
 
-/// <summary>Case-insensitive so the configuration file can say "window" or "Window".</summary>
-public sealed class StopMethodConverter : JsonConverter<StopMethod>
+/// <summary>
+/// Reads an enum case-insensitively, so the configuration file can say "window" or "Window", and names
+/// the valid values when a value is unknown.
+/// </summary>
+public abstract class CaseInsensitiveEnumConverter<TEnum>(string propertyName) : JsonConverter<TEnum>
+    where TEnum : struct, Enum
 {
-    public override StopMethod Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override TEnum Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         var value = reader.GetString();
-        if (Enum.TryParse<StopMethod>(value, ignoreCase: true, out var method))
+        if (Enum.TryParse<TEnum>(value, ignoreCase: true, out var result))
         {
-            return method;
+            return result;
         }
 
-        throw new JsonException($"Unknown StopMethod '{value}'. Use Process, Window or None.");
+        var names = Enum.GetNames<TEnum>();
+        var valid = string.Join(", ", names[..^1]) + " or " + names[^1];
+        throw new JsonException($"Unknown {propertyName} '{value}'. Use {valid}.");
     }
 
-    public override void Write(Utf8JsonWriter writer, StopMethod value, JsonSerializerOptions options)
+    public override void Write(Utf8JsonWriter writer, TEnum value, JsonSerializerOptions options)
     {
         writer.WriteStringValue(value.ToString());
     }
 }
+
+public sealed class StopMethodConverter() : CaseInsensitiveEnumConverter<StopMethod>("StopMethod");
 
 public sealed class AppConfiguration
 {
@@ -121,6 +129,9 @@ public sealed class ConfigurationFile
 
     /// <summary>Named sets of workspaces to open together.</summary>
     public List<WorkspaceProfile> WorkspaceProfiles { get; set; } = [];
+
+    /// <summary>One-click buttons that start and stop a set of linked apps and workspaces.</summary>
+    public List<Activity> Activities { get; set; } = [];
 
     /// <summary>Overrides where VS Code is looked for. Absent means the usual install locations.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

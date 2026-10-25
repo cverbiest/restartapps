@@ -42,5 +42,28 @@
       "WindowAumid": "*_crx_faolngohbobgegn*"
     }
   ],
-  "Profiles": []
+  "Profiles": [],
+  "Workspaces": [
+    { "Name": "restartapps", "Uri": "file:///c%3A/cce/workspaces/restartapps" }
+  ],
+  "Activities": [
+    {
+      "Name": "Docking",
+      "Apps": [
+        { "Name": "RDP Plus", "Action": "Restart" },
+        { "Name": "Teams", "Action": "Restart" },
+        { "Name": "Outlook", "Action": "Start" }
+      ],
+      "Workspaces": [
+        { "Uri": "file:///c%3A/cce/workspaces/restartapps" }
+      ]
+    },
+    {
+      "Name": "Wind down",
+      "Apps": [
+        { "Name": "Teams", "Action": "Stop" },
+        { "Name": "Outlook", "Action": "Stop" }
+      ]
+    }
+  ]
 }

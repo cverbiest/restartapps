@@ -37,3 +37,22 @@ A new feature therefore goes into Core first, with tests, and then into both app
   the same file does reload - that is how the two stay in step when both are open.
 - **Session-only state.** Kill/Restart and Close/Open ticks are never saved, except as part of a
   profile or session. Core types carry them; the apps keep them across refreshes.
+
+## Activities
+
+An activity run is split in two so the rules can be tested without starting anything:
+
+- `ActivityPlanner.Plan(activity, config, isRunning)` is pure. It resolves each item (apps by name,
+  case-insensitive; workspaces by URI, with name and window title from the preferred list when
+  present), applies the rules - Start only when not running, StopMethod None cannot be stopped,
+  unknown or disabled apps skipped - and returns ordered `ActivityStep`s plus `Notes` to log.
+  Order: StopApp, CloseWorkspace, Wait (only if something was stopped), StartApp, OpenWorkspace.
+- `ActivityRunner.RunAsync` plans with `AppController.IsRunning`, logs the notes and carries the
+  steps out through `AppController` and `WorkspaceController`. Workspace opens go in one
+  `OpenAsync` batch so VS Code gets its pause between windows.
+
+Enums in the configuration (`StopMethod`, `AppAction`, `WorkspaceAction`) are read with
+`CaseInsensitiveEnumConverter<T>`, whose error names the valid values.
+
+RDP sessions are expected to become a third item list on `Activity` (`RdpSessions`) with its own step
+kinds; nothing for them exists yet.
