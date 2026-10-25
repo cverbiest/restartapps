@@ -11,6 +11,7 @@ this folder in the same commit.
 | --- | --- |
 | `src/DevWorkspaceLauncher.Core` | UI-free shared library (`net10.0-windows`): configuration, app and workspace operations, Win32 helpers. |
 | `src/DevWorkspaceLauncher.WinForms` | The WinForms app, themed with Krypton. |
+| `src/DevWorkspaceLauncher.WinUI` | The WinUI 3 app (Windows App SDK 2.5.1), unpackaged. A trial next to the WinForms app; both stay current. |
 | `tests/DevWorkspaceLauncher.Core.Tests` | xUnit tests for Core. |
 
 `DevWorkspaceLauncher.slnx` at the root holds them all.
@@ -30,7 +31,11 @@ Requires the .NET 10 SDK on Windows.
 dotnet build DevWorkspaceLauncher.slnx
 dotnet test tests/DevWorkspaceLauncher.Core.Tests
 dotnet run --project src/DevWorkspaceLauncher.WinForms
+dotnet run --project src/DevWorkspaceLauncher.WinUI
 ```
+
+The WinUI app needs no Visual Studio workload or templates: the `Microsoft.WindowsAppSDK` package
+brings the XAML compiler, and the plain .NET SDK builds it.
 
 Publishing:
 
@@ -40,6 +45,16 @@ dotnet publish src/DevWorkspaceLauncher.WinForms -c Release
 
 Output: `src\DevWorkspaceLauncher.WinForms\bin\Release\net10.0-windows\publish`, a framework-dependent,
 ReadyToRun win-x64 build. The publish settings live in the project file, so that command is complete.
+
+```powershell
+dotnet publish src/DevWorkspaceLauncher.WinUI -c Release
+```
+
+Output: `src\DevWorkspaceLauncher.WinUI\bin\Release\net10.0-windows10.0.26100.0\publish`. Unpackaged
+(`WindowsPackageType` None) with the Windows App SDK runtime carried in the folder
+(`WindowsAppSDKSelfContained`), so it runs where that runtime is not installed; .NET itself is
+framework-dependent, as for the WinForms app. The project sets no `Platforms`, so solution and
+project builds share one output folder (`bin\<config>\<tfm>`); the runtime identifier pins x64.
 
 ## Naming rules
 

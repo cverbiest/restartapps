@@ -24,6 +24,24 @@ A new feature therefore goes into Core first, with tests, and then into both app
 | `VsCodeUri`, `VsCodeWorkspaces`, `VsCodeLauncher`, `VsCodeWindows`, `WorkspaceRows` | VS Code workspace discovery, open-state probe, launching, window matching, grid rows. |
 | `WindowFinder`, `ShortcutResolver`, `CommandLineParser`, `UserEnvironment` | Win32 helpers. |
 
+## How the WinUI app wires Core
+
+- `App.State` (`AppState`) is the one shared object: the loaded `ConfigurationFile`, the
+  `ConfigurationWatcher`, the log (an `ObservableCollection<string>`), the busy flag, the
+  session-only workspace ticks, and the runs that both the rail and the pages trigger
+  (`RunActivityAsync`, `RunSessionAsync`, `RunProfileAsync`, `ApplyProfile`, `ApplySession`). Pages
+  subscribe to its events (`ConfigurationChanged`, `AppsChanged`, `WorkspacesChanged`,
+  `WindowActivated`, `BusyChanged`) and unsubscribe when navigated away from.
+- `MainWindow` holds the `NavigationView` rail. Activities, sessions and profiles are rail items with
+  `SelectsOnInvoked = false` that run on `ItemInvoked`. Two traps found the hard way: NavigationView
+  can bounce an invocation of a non-selecting item (re-invoking the previous page, then the item), so
+  a repeat of the same item within a second is ignored; and toggling `IsEnabled` on such an item while
+  it runs turned that bounce into an endless loop, so busy is shown with a progress bar instead and
+  overlapping runs are refused by `AppState.RunBusyAsync`.
+- `WindowMessageHook` subclasses the window to see `WM_SETTINGCHANGE`, which WinUI does not surface,
+  for `UserEnvironment.Refresh`.
+- The latest log line shows in an `InfoBar`; the Activity log page shows them all.
+
 ## Conventions
 
 - **Logging.** Core never owns a log view. Operations that report progress take an
