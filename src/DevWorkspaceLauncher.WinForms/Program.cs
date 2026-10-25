@@ -57,6 +57,8 @@ internal sealed class MainForm : KryptonForm
     private readonly KryptonComboBox _workspaceProfiles = new();
     private readonly FlowLayoutPanel _workspaceQuickRun = new();
     private readonly List<KryptonButton> _workspaceProfileButtons = [];
+    private readonly FlowLayoutPanel _activityQuickRun = new();
+    private readonly List<KryptonButton> _activityButtons = [];
     private readonly System.Windows.Forms.Timer _workspaceRefreshTimer = new() { Interval = 300 };
 
     /// <summary>
@@ -76,8 +78,8 @@ internal sealed class MainForm : KryptonForm
         _lastKnownJson = snapshot.Json;
 
         Text = AppIdentity.DisplayName;
-        MinimumSize = new Size(660, 788);
-        Size = new Size(740, 888);
+        MinimumSize = new Size(660, 836);
+        Size = new Size(740, 936);
         StartPosition = FormStartPosition.CenterScreen;
         MaximizeBox = false;
         Padding = new Padding(16);
@@ -86,10 +88,11 @@ internal sealed class MainForm : KryptonForm
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 6,
+            RowCount = 7,
             BackColor = Color.Transparent
         };
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 70));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 60));
@@ -99,23 +102,30 @@ internal sealed class MainForm : KryptonForm
 
         layout.Controls.Add(BuildHeader(), 0, 0);
 
-        // Both sets of one-click buttons sit outside the tabs so they stay reachable from either tab.
+        // The one-click buttons sit outside the tabs so they stay reachable from either tab.
+        _activityQuickRun.Dock = DockStyle.Fill;
+        _activityQuickRun.BackColor = Color.Transparent;
+        _activityQuickRun.WrapContents = false;
+        _activityQuickRun.AutoScroll = true;
+        _activityQuickRun.Padding = new Padding(0, 2, 0, 2);
+        layout.Controls.Add(_activityQuickRun, 0, 1);
+
         _workspaceQuickRun.Dock = DockStyle.Fill;
         _workspaceQuickRun.BackColor = Color.Transparent;
         _workspaceQuickRun.WrapContents = false;
         _workspaceQuickRun.AutoScroll = true;
         _workspaceQuickRun.Padding = new Padding(0, 2, 0, 2);
-        layout.Controls.Add(_workspaceQuickRun, 0, 1);
+        layout.Controls.Add(_workspaceQuickRun, 0, 2);
 
         _quickRun.Dock = DockStyle.Fill;
         _quickRun.BackColor = Color.Transparent;
         _quickRun.WrapContents = false;
         _quickRun.AutoScroll = true;
         _quickRun.Padding = new Padding(0, 2, 0, 2);
-        layout.Controls.Add(_quickRun, 0, 2);
+        layout.Controls.Add(_quickRun, 0, 3);
 
-        layout.Controls.Add(BuildTabs(), 0, 3);
-        layout.Controls.Add(BuildActionBar(), 0, 4);
+        layout.Controls.Add(BuildTabs(), 0, 4);
+        layout.Controls.Add(BuildActionBar(), 0, 5);
 
         _txtLog.Dock = DockStyle.Fill;
         _txtLog.Multiline = true;
@@ -123,7 +133,7 @@ internal sealed class MainForm : KryptonForm
         _txtLog.ReadOnly = true;
         _txtLog.WordWrap = false;
         _txtLog.StateCommon.Content.Font = new Font("Consolas", 9F);
-        layout.Controls.Add(_txtLog, 0, 5);
+        layout.Controls.Add(_txtLog, 0, 6);
 
         _workspaceRefreshTimer.Tick += (_, _) =>
         {
@@ -612,6 +622,7 @@ internal sealed class MainForm : KryptonForm
 
         RebuildProfileControls();
         RebuildWorkspaceProfileControls();
+        RebuildActivityControls();
         RefreshWorkspaces();
     }
 
@@ -849,7 +860,7 @@ internal sealed class MainForm : KryptonForm
         _btnRestart.Enabled = !busy;
         _btnRestartSelected.Enabled = !busy;
         _btnEdit.Enabled = !busy;
-        foreach (var button in _profileButtons)
+        foreach (var button in _profileButtons.Concat(_activityButtons))
         {
             button.Enabled = !busy;
         }
@@ -886,7 +897,7 @@ internal sealed class MainForm : KryptonForm
 
         var hidden = _config.Apps.Count - _visible.Count;
         var hiddenText = hidden == 0 ? string.Empty : $", {hidden} disabled";
-        LogMessage($"Configuration reloaded ({_visible.Count} application(s){hiddenText}, {_config.Profiles.Count} profile(s)).");
+        LogMessage($"Configuration reloaded ({_visible.Count} application(s){hiddenText}, {_config.Profiles.Count} profile(s), {_config.Activities.Count} activity(ies)).");
     }
 
     // ------------------------------------------------------------- drag/drop
@@ -1040,6 +1051,70 @@ internal sealed class MainForm : KryptonForm
     }
 
     private Task CloseWorkspaceAsync(WorkspaceRow row) => WorkspaceController.CloseAsync(row.Name, row.WindowTitle, LogMessage);
+
+    // ------------------------------------------------------------ activities
+
+    private void RebuildActivityControls()
+    {
+        foreach (var button in _activityButtons)
+        {
+            _activityQuickRun.Controls.Remove(button);
+            button.Dispose();
+        }
+
+        _activityButtons.Clear();
+        _activityQuickRun.Controls.Clear();
+
+        _activityQuickRun.Controls.Add(new KryptonLabel
+        {
+            Text = _config.Activities.Count == 0 ? "No activities yet - add them to the configuration file." : "One click activities:",
+            Margin = new Padding(0, 8, 8, 0),
+            AutoSize = true
+        });
+
+        foreach (var activity in _config.Activities)
+        {
+            var button = new KryptonButton
+            {
+                Text = activity.Name,
+                AutoSize = true,
+                Margin = new Padding(0, 4, 6, 4),
+                Tag = activity,
+                Enabled = !_busy
+            };
+            button.ToolTipValues.EnableToolTips = true;
+            button.ToolTipValues.Description = $"Run '{activity.Name}'.";
+            button.Click += ActivityButton_Click;
+
+            if (_dropTargetsEnabled)
+            {
+                EnableDropTarget(button);
+            }
+
+            _activityButtons.Add(button);
+            _activityQuickRun.Controls.Add(button);
+        }
+    }
+
+    private async void ActivityButton_Click(object? sender, EventArgs e)
+    {
+        if (_busy || sender is not KryptonButton { Tag: Activity activity })
+        {
+            return;
+        }
+
+        SetBusy(true);
+        try
+        {
+            await ActivityRunner.RunAsync(activity, _config, LogMessage);
+        }
+        finally
+        {
+            SetBusy(false);
+        }
+
+        RefreshWorkspaces();
+    }
 
     // ------------------------------------------------------- workspace sessions
 
