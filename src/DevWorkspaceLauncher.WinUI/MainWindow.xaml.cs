@@ -1,6 +1,7 @@
 using DevWorkspaceLauncher.WinUI.Pages;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Windows.ApplicationModel.DataTransfer;
 
 namespace DevWorkspaceLauncher.WinUI;
 
@@ -61,7 +62,7 @@ public sealed partial class MainWindow : Window
         Nav.MenuItems.Add(new NavigationViewItemHeader { Content = "Activities" });
         if (State.Config.Activities.Count == 0)
         {
-            Nav.MenuItems.Add(Hint("None yet - add them to the configuration file"));
+            Nav.MenuItems.Add(Hint("None yet", "Add activities to the configuration file (Settings > Edit Config)."));
         }
 
         foreach (var activity in State.Config.Activities)
@@ -108,8 +109,12 @@ public sealed partial class MainWindow : Window
         return item;
     }
 
-    private static NavigationViewItem Hint(string text) =>
-        new() { Content = text, IsEnabled = false, SelectsOnInvoked = false };
+    private static NavigationViewItem Hint(string text, string tooltip)
+    {
+        var item = new NavigationViewItem { Content = text, IsEnabled = false, SelectsOnInvoked = false };
+        ToolTipService.SetToolTip(item, tooltip);
+        return item;
+    }
 
     private async void Nav_ItemInvoked(NavigationView sender, NavigationViewItemInvokedEventArgs args)
     {
@@ -188,11 +193,38 @@ public sealed partial class MainWindow : Window
         Status.IsOpen = true;
     }
 
+    // Drop an executable or shortcut anywhere on the window to add it to the configuration.
     private void Root_DragOver(object sender, DragEventArgs e)
     {
+        e.AcceptedOperation = e.DataView.Contains(StandardDataFormats.StorageItems)
+            ? DataPackageOperation.Copy
+            : DataPackageOperation.None;
     }
 
-    private void Root_Drop(object sender, DragEventArgs e)
+    private async void Root_Drop(object sender, DragEventArgs e)
     {
+        if (!e.DataView.Contains(StandardDataFormats.StorageItems))
+        {
+            return;
+        }
+
+        var deferral = e.GetDeferral();
+        try
+        {
+            var items = await e.DataView.GetStorageItemsAsync();
+            var added = DroppedApps.Add(State.Config, items.Select(item => item.Path), State.LogMessage);
+            if (added.Count > 0)
+            {
+                State.Save();
+            }
+        }
+        catch (Exception ex)
+        {
+            State.LogMessage($"Failed to add the dropped files: {ex.Message}");
+        }
+        finally
+        {
+            deferral.Complete();
+        }
     }
 }
