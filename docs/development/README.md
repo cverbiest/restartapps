@@ -55,6 +55,8 @@ Output: `src\DevWorkspaceLauncher.WinUI\bin\Release\net10.0-windows10.0.26100.0\
 (`WindowsAppSDKSelfContained`), so it runs where that runtime is not installed; .NET itself is
 framework-dependent, as for the WinForms app. The project sets no `Platforms`, so solution and
 project builds share one output folder (`bin\<config>\<tfm>`); the runtime identifier pins x64.
+The publish folder is about 150 MB, most of it the Windows App SDK runtime and its resources
+(`RestartAgent.exe` in it belongs to the Windows App SDK).
 
 ## Naming rules
 

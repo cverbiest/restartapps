@@ -1,22 +1,30 @@
-# RestartApps
+# Developer Workspace Launcher
 
-A small Windows utility that stops a configured set of desktop applications and starts the ones
-you select — handy after a VPN change, a docking-station reconnect, or when tray apps get stuck.
+A Windows launcher for a developer's working day: one click starts the apps and opens the VS Code
+workspaces that belong to a piece of work, and the tray apps that get stuck after a VPN change or a
+docking-station reconnect can be stopped and started again. (It started life as *RestartApps*.)
 
-Two implementations are included:
+Two desktop apps are included, side by side. They do the same things, read and write the same
+configuration file, and can run at the same time:
 
-- **`src/DevWorkspaceLauncher.WinForms`** on top of **`src/DevWorkspaceLauncher.Core`** — a .NET 10
-  WinForms app, themed with the
-  [Krypton Toolkit](https://github.com/Krypton-Suite/Standard-Toolkit). This is the current version.
-- **`RestartApps.ps1`** — the original PowerShell/WinForms prototype, kept for reference and for
-  machines where you would rather not build anything.
+- **`src/DevWorkspaceLauncher.WinUI`** — a WinUI 3 app (Windows App SDK) in the Windows 11 style:
+  a navigation rail on the left with your activities, the pages, your sessions and app profiles.
+- **`src/DevWorkspaceLauncher.WinForms`** — a WinForms app themed with the
+  [Krypton Toolkit](https://github.com/Krypton-Suite/Standard-Toolkit): tabs, with rows of one-click
+  buttons above them.
 
-Both read the same `restartapps.json` configuration file. The prototype understands only the
-original fields and only the original bare-array layout.
+Both are built on **`src/DevWorkspaceLauncher.Core`**, which holds everything they do.
+**`RestartApps.ps1`** is the original PowerShell/WinForms prototype, kept for reference only; it reads
+only the original bare-array configuration layout.
 
 ## Screens and behaviour
 
-The .NET window shows a grid with one row per configured application and a log pane underneath.
+Both apps show the same lists and buttons; where they differ is layout. In the WinUI app, activities,
+sessions and app profiles are items in the navigation rail, the latest result shows in a banner, and
+the full log has its own **Activity log** page; **Settings** shows where the configuration file is.
+In the WinForms app they are rows of one-click buttons above the tabs, with the log at the bottom.
+
+The **Apps** list has one row per configured application.
 Two tick boxes per row control what happens, both starting from the configuration and both editable
 in place:
 
@@ -26,21 +34,21 @@ in place:
 | `Restart` | This app is started, and is the one **Restart Selected** acts on. Defaults from the `Restart` field. |
 
 Edits made in the grid apply to the current session only — they are not written back to
-`restartapps.json`, so the file stays the source of the defaults. (A drag-and-drop addition does
+the configuration file, so the file stays the source of the defaults. (A drag-and-drop addition does
 save, and it writes the tick states as they stand at that moment.)
 
 - **Kill && Start Selected** — stops every application ticked `Kill`, waits a second, then starts
   every application ticked `Restart`. Either half may be empty; the log says so and the other half
   still runs.
 - **Restart Selected** — stops and restarts only the applications ticked `Restart`, regardless of
-  their `Kill` tick (.NET version only).
-- **Edit Config** — opens `restartapps.json` in whatever editor is associated with `.json`,
-  falling back to Notepad if there is no association (.NET version only).
+  their `Kill` tick.
+- **Edit Config** — opens the configuration file in whatever editor is associated with `.json`,
+  falling back to Notepad if there is no association.
 
 Processes are matched by executable name derived from the command line and terminated together with
 their child processes. Failures to stop a process are ignored; failures to start one are logged.
 
-### Profiles (.NET version only)
+### Profiles
 
 A profile is a named set of Kill/Restart ticks. The bar above the grid manages them, and every
 profile also gets its own button on the "One click apps" row. That row sits above the tabs, so the
@@ -59,9 +67,9 @@ thing" shortcut they are meant to be.
 
 An application the profile has never heard of is cleared (neither killed nor started) rather than
 left at whatever it happened to be, so a profile always describes the whole run. Profiles are stored
-in `restartapps.json` and every profile operation saves the file immediately.
+in the configuration file and every profile operation saves the file immediately.
 
-### Workspaces (.NET version only)
+### Workspaces
 
 The window opens on **Workspaces**, the first of its two tabs; **Apps** is the second and is
 everything described above. **Workspaces** lists VS Code workspaces and folders, says which ones VS
@@ -69,7 +77,7 @@ Code currently has open, and launches them:
 
 | Control | Effect |
 | --- | --- |
-| **Pref** | Keeps the workspace on the preferred list. Saved to `restartapps.json` straight away. |
+| **Pref** | Keeps the workspace on the preferred list. Saved to the configuration file straight away. |
 | **Close** | Include this window in **Close Ticked**. Only available while the workspace is open. |
 | **Open** | Include this workspace in **Open Ticked**, and in a saved session. |
 | **Launch** / **Focus** | Opens the workspace in VS Code. One that is already open is focused rather than opened a second time. |
@@ -141,7 +149,7 @@ rest of the run goes ahead. Activity buttons act at once, without confirmation.
 
 Activities are written in the configuration file (see below); there is no editor in the app yet.
 
-### Live configuration reload (.NET version only)
+### Live configuration reload
 
 The configuration file is watched while the window is open. Saving it — from the **Edit Config**
 editor or from anywhere else — reloads the list within about half a second and logs the reload.
@@ -151,7 +159,7 @@ reload, and a file still locked by the editor is retried a few times.
 Because the file is the source of truth, a reload also resets the tick boxes to the `Kill` and
 `Restart` flags it contains, discarding grid edits made since the last load.
 
-### Adding applications by drag and drop (.NET version only)
+### Adding applications by drag and drop
 
 Drop an executable or a shortcut anywhere on the window to append it to the configuration:
 
@@ -160,9 +168,9 @@ Drop an executable or a shortcut anywhere on the window to append it to the conf
 - The entry is named after the dropped file and added with both flags on (`"Kill": true`,
   `"Restart": true`).
 - Entries whose name is already present are skipped.
-- The current tick states are preserved, and `restartapps.json` is rewritten immediately.
+- The current tick states are preserved, and the configuration file is rewritten immediately.
 
-### Stopping browser-hosted PWAs (.NET version only)
+### Stopping browser-hosted PWAs
 
 A PWA installed through Chrome/Edge/Brave **has no process of its own**. Chromium runs one browser
 process per user-data-dir, and every profile and installed app is just another window inside it —
@@ -171,7 +179,7 @@ in the shortcut (`chrome_proxy.exe`) exits immediately after handing off, so mat
 finds nothing at all.
 
 What *is* unique is the window's AppUserModelID. Setting `StopMethod` to `Window` and giving a
-`WindowAumid` pattern makes RestartApps close exactly those windows with `WM_CLOSE`, never touching
+`WindowAumid` pattern makes the launcher close exactly those windows with `WM_CLOSE`, never touching
 the browser process:
 
 ```json
@@ -190,7 +198,7 @@ the first 5 and last 10 characters — so it will not equal the `--app-id` in th
 wildcard around the truncated fragment, as above, is the practical way to write it. The
 `*_crx_*` fragment is what distinguishes an installed app window from an ordinary browser window.
 
-Windows are asked to close politely; RestartApps waits up to three seconds and logs any that
+Windows are asked to close politely; the launcher waits up to three seconds and logs any that
 refuse. Nothing is force-killed by this method.
 
 ## Configuration
@@ -308,11 +316,13 @@ otherwise `%LOCALAPPDATA%\Programs\Microsoft VS Code`, `%ProgramFiles%\Microsoft
 Comments and trailing commas are tolerated. `devworkspacelauncher.example.json` in this repository
 is an example to copy from.
 
-## Build and run (.NET version)
+## Build and run
 
-Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download) on Windows.
+Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download) on Windows. Nothing else: the
+WinUI app's toolchain comes from its NuGet package.
 
 ```powershell
+dotnet run --project src/DevWorkspaceLauncher.WinUI
 dotnet run --project src/DevWorkspaceLauncher.WinForms
 ```
 
@@ -332,6 +342,16 @@ Being framework-dependent, the published app needs the .NET 10 desktop runtime o
 runs it. Set `<SelfContained>true</SelfContained>` in the project file if you would rather carry the
 runtime along.
 
+The WinUI app publishes the same way:
+
+```powershell
+dotnet publish src/DevWorkspaceLauncher.WinUI -c Release
+```
+
+It lands in `src\DevWorkspaceLauncher.WinUI\bin\Release\net10.0-windows10.0.26100.0\publish`. It is
+unpackaged — run the `.exe` from that folder, no installer — and carries the Windows App SDK runtime
+in the folder, so it also needs only the .NET 10 desktop runtime.
+
 ## Run (PowerShell version)
 
 ```powershell
@@ -340,7 +360,7 @@ powershell -ExecutionPolicy Bypass -File .\RestartApps.ps1
 
 ## Notes
 
-- Windows only — both versions use WinForms and terminate processes by name.
+- Windows only — both apps use Windows UI frameworks and terminate processes by name.
 - Killing applications by process name affects *all* instances of that executable, including ones
   you did not start from this tool.
 - The Workspaces tab reads VS Code Stable's storage under `%APPDATA%\Code`. Insiders and other
@@ -357,7 +377,8 @@ dotnet test tests/DevWorkspaceLauncher.Core.Tests
 See [docs/development](docs/development/README.md) for how the projects fit together.
 
 Covers the workspace URI decoding, the storage scan, the open probe, executable resolution, the
-grid's row rules and configuration round-tripping. The WinForms layer is not unit tested.
+grid's row rules, configuration round-tripping and location/migration, profiles, sessions, dropped
+files, the configuration watcher and activity planning. The two UI layers are not unit tested.
 
 ## License
 
