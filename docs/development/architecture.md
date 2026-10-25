@@ -18,6 +18,9 @@ A new feature therefore goes into Core first, with tests, and then into both app
 | `ProfileOperations` | App profiles: find, apply (unlisted apps are cleared), capture, upsert. |
 | `DroppedApps` | Turning dropped `.exe`/`.lnk` files into app entries. |
 | `ConfigFileOpener` | Edit Config: the `.json` association, falling back to Notepad. |
+| `WorkspaceController` | Workspace rows with open state; open (batched, 400 ms apart), launch/focus, close (strict single title match), preferred toggle. |
+| `SessionOperations` | Sessions: find, apply to the Open ticks, resolve names, upsert. |
+| `ConfigurationWatcher` | Debounced, retrying reload of the configuration file, raised on the UI thread. Ignores content equal to `LastKnownJson`. |
 | `VsCodeUri`, `VsCodeWorkspaces`, `VsCodeLauncher`, `VsCodeWindows`, `WorkspaceRows` | VS Code workspace discovery, open-state probe, launching, window matching, grid rows. |
 | `WindowFinder`, `ShortcutResolver`, `CommandLineParser`, `UserEnvironment` | Win32 helpers. |
 
@@ -29,6 +32,8 @@ A new feature therefore goes into Core first, with tests, and then into both app
 - **Async.** Operations that wait (closing windows, the pause between stop and start) are `async Task`.
   The apps await them on the UI thread and disable their run buttons meanwhile.
 - **Saving.** Core changes the in-memory `ConfigurationFile`; the app decides when to call
-  `AppConfigurationStore.Save` (and so when its configuration watcher should ignore the resulting write).
+  `AppConfigurationStore.Save`, and then sets its `ConfigurationWatcher.LastKnownJson` to the JSON
+  written, so its own save does not come back as a reload. Another app (the other front end) saving
+  the same file does reload - that is how the two stay in step when both are open.
 - **Session-only state.** Kill/Restart and Close/Open ticks are never saved, except as part of a
   profile or session. Core types carry them; the apps keep them across refreshes.

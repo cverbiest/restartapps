@@ -65,10 +65,8 @@ internal sealed class MainForm : KryptonForm
     /// </summary>
     private readonly Dictionary<string, (bool Close, bool Open)> _workspaceTicks = new(StringComparer.OrdinalIgnoreCase);
 
-    private readonly System.Windows.Forms.Timer _reloadTimer = new() { Interval = 400 };
-    private FileSystemWatcher? _watcher;
+    private ConfigurationWatcher? _watcher;
     private string _lastKnownJson;
-    private int _reloadRetries;
     private bool _dropTargetsEnabled;
     private bool _busy;
 
@@ -127,8 +125,6 @@ internal sealed class MainForm : KryptonForm
         _txtLog.StateCommon.Content.Font = new Font("Consolas", 9F);
         layout.Controls.Add(_txtLog, 0, 5);
 
-        _reloadTimer.Tick += ReloadTimer_Tick;
-
         _workspaceRefreshTimer.Tick += (_, _) =>
         {
             _workspaceRefreshTimer.Stop();
@@ -170,7 +166,6 @@ internal sealed class MainForm : KryptonForm
 
         FormClosed += (_, _) =>
         {
-            _reloadTimer.Stop();
             _workspaceRefreshTimer.Stop();
             _watcher?.Dispose();
         };
@@ -802,6 +797,11 @@ internal sealed class MainForm : KryptonForm
         try
         {
             _lastKnownJson = AppConfigurationStore.Save(_config);
+            if (_watcher is not null)
+            {
+                _watcher.LastKnownJson = _lastKnownJson;
+            }
+
             LogMessage($"Saved {AppConfigurationStore.FilePath}.");
         }
         catch (Exception ex)
@@ -864,23 +864,12 @@ internal sealed class MainForm : KryptonForm
     private void StartWatchingConfiguration()
     {
         var path = AppConfigurationStore.FilePath;
-        var directory = Path.GetDirectoryName(path);
-        if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory))
-        {
-            return;
-        }
-
         try
         {
-            _watcher = new FileSystemWatcher(directory, Path.GetFileName(path))
-            {
-                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.Size,
-                SynchronizingObject = this
-            };
-            _watcher.Changed += ConfigurationFileChanged;
-            _watcher.Created += ConfigurationFileChanged;
-            _watcher.Renamed += ConfigurationFileChanged;
-            _watcher.EnableRaisingEvents = true;
+            _watcher = new ConfigurationWatcher(path) { LastKnownJson = _lastKnownJson };
+            _watcher.Reloaded += ConfigurationReloaded;
+            _watcher.Failed += (_, message) => LogMessage(message);
+            _watcher.Start();
             LogMessage($"Watching {path} for changes.");
         }
         catch (Exception ex)
@@ -889,42 +878,8 @@ internal sealed class MainForm : KryptonForm
         }
     }
 
-    private void ConfigurationFileChanged(object? sender, FileSystemEventArgs e)
+    private void ConfigurationReloaded(object? sender, ConfigurationSnapshot snapshot)
     {
-        // Editors write in bursts, and often through a temp file plus a rename, so debounce.
-        _reloadRetries = 0;
-        _reloadTimer.Stop();
-        _reloadTimer.Start();
-    }
-
-    private void ReloadTimer_Tick(object? sender, EventArgs e)
-    {
-        _reloadTimer.Stop();
-
-        ConfigurationSnapshot snapshot;
-        try
-        {
-            snapshot = AppConfigurationStore.Load();
-        }
-        catch (IOException) when (_reloadRetries < 5)
-        {
-            // Still locked by the editor - try again shortly.
-            _reloadRetries++;
-            _reloadTimer.Start();
-            return;
-        }
-        catch (Exception ex)
-        {
-            LogMessage($"Failed to reload configuration: {ex.Message}");
-            return;
-        }
-
-        // Also filters out the events raised by our own Save().
-        if (snapshot.Json == _lastKnownJson)
-        {
-            return;
-        }
-
         _lastKnownJson = snapshot.Json;
         _config = snapshot.Configuration;
         ApplyConfiguration();
@@ -980,29 +935,12 @@ internal sealed class MainForm : KryptonForm
 
     // ------------------------------------------------------------ workspaces
 
-    /// <summary>Re-reads the workspace list and re-checks which of the shown rows are open.</summary>
     private void RefreshWorkspaces()
     {
         // A tick box left mid-edit would otherwise throw when the rows are replaced.
         _workspaceGrid.EndEdit();
 
-        var discovered = VsCodeWorkspaces.Discover(VsCodeWorkspaces.DefaultStorageRoot);
-        var rows = WorkspaceRows.Build(discovered, _config.Workspaces, _showAllWorkspaces.Checked);
-
-        // With VS Code shut down nothing can be open, and the probe can be skipped entirely.
-        var running = VsCodeWorkspaces.IsRunning();
-        foreach (var row in rows)
-        {
-            row.IsOpen = running
-                && row.Id is not null
-                && VsCodeWorkspaces.IsOpen(VsCodeWorkspaces.DefaultStorageRoot, row.Id);
-
-            if (_workspaceTicks.TryGetValue(row.Uri, out var ticks))
-            {
-                row.Close = ticks.Close;
-                row.Open = ticks.Open;
-            }
-        }
+        var rows = WorkspaceController.LoadRows(_config, _showAllWorkspaces.Checked, _workspaceTicks);
 
         _workspaceGrid.Rows.Clear();
         foreach (var row in rows)
@@ -1078,34 +1016,9 @@ internal sealed class MainForm : KryptonForm
         await OpenWorkspacesAsync(ticked.Select(row => (row.Uri, row.Name)).ToList());
     }
 
-    /// <summary>Opens each workspace in turn. VS Code focuses one it already has open.</summary>
     private async Task OpenWorkspacesAsync(IReadOnlyList<(string Uri, string Name)> workspaces)
     {
-        var executable = VsCodeLauncher.ResolveExecutable(_config.VsCodeExecutable);
-        if (executable is null)
-        {
-            LogMessage("Could not find VS Code. Set \"VsCodeExecutable\" in the configuration file.");
-            return;
-        }
-
-        foreach (var (uri, name) in workspaces)
-        {
-            var (kind, _, _) = VsCodeUri.Describe(uri);
-            LogMessage($"Opening {name}...");
-
-            try
-            {
-                Process.Start(VsCodeLauncher.CreateStartInfo(executable, VsCodeLauncher.BuildArguments(uri, kind)));
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Failed to open {name}: {ex.Message}");
-            }
-
-            // VS Code drops requests that arrive while it is still starting the previous window.
-            await Task.Delay(400);
-        }
-
+        await WorkspaceController.OpenAsync(workspaces, _config.VsCodeExecutable, LogMessage);
         RefreshWorkspaces();
     }
 
@@ -1126,75 +1039,19 @@ internal sealed class MainForm : KryptonForm
         RefreshWorkspaces();
     }
 
-    /// <summary>
-    /// Asks the workspace's window to close. Nothing is ever forced, and nothing is closed unless
-    /// exactly one window matches - VS Code shares one process and one AppUserModelID across every
-    /// window, so a wrong guess would close somebody else's editor.
-    /// </summary>
-    private async Task CloseWorkspaceAsync(WorkspaceRow row)
-    {
-        var windows = WindowFinder.FindByProcessName("Code");
-        var titles = windows.Select(window => window.Title).ToList();
-        var matches = VsCodeWindows.MatchAll(titles, row.Name, row.WindowTitle);
-
-        if (matches.Count == 0)
-        {
-            LogMessage($"{row.Name}: no VS Code window matches. Set \"WindowTitle\" for it in the configuration.");
-            return;
-        }
-
-        if (matches.Count > 1)
-        {
-            var candidates = string.Join(", ", matches.Select(index => $"\"{titles[index]}\""));
-            LogMessage($"{row.Name}: {matches.Count} windows match ({candidates}); nothing closed. Set \"WindowTitle\" to pin it.");
-            return;
-        }
-
-        var target = windows[matches[0]];
-        LogMessage($"Closing {row.Name} (\"{target.Title}\")...");
-        WindowFinder.Close(target.Handle);
-
-        for (var attempt = 0; attempt < 20; attempt++)
-        {
-            if (!WindowFinder.StillOpen(target.Handle))
-            {
-                LogMessage($"{row.Name}: closed.");
-                return;
-            }
-
-            await Task.Delay(150);
-        }
-
-        LogMessage($"{row.Name}: still open after 3 seconds - VS Code may be asking about unsaved work.");
-    }
+    private Task CloseWorkspaceAsync(WorkspaceRow row) => WorkspaceController.CloseAsync(row.Name, row.WindowTitle, LogMessage);
 
     // ------------------------------------------------------- workspace sessions
 
-    private WorkspaceProfile? SelectedWorkspaceProfile()
-    {
-        return _workspaceProfiles.SelectedItem is string name
-            ? _config.WorkspaceProfiles.FirstOrDefault(profile => string.Equals(profile.Name, name, StringComparison.OrdinalIgnoreCase))
-            : null;
-    }
+    private WorkspaceProfile? SelectedWorkspaceProfile() =>
+        SessionOperations.Find(_config.WorkspaceProfiles, _workspaceProfiles.SelectedItem as string);
 
-    /// <summary>Ticks Open for the session's workspaces and clears it everywhere else.</summary>
     private void ApplyWorkspaceProfile(WorkspaceProfile profile)
     {
-        var wanted = new HashSet<string>(profile.Workspaces, StringComparer.OrdinalIgnoreCase);
-
-        foreach (var uri in _workspaceTicks.Keys.ToList())
-        {
-            _workspaceTicks[uri] = (_workspaceTicks[uri].Close, wanted.Contains(uri));
-        }
-
-        foreach (var uri in wanted)
-        {
-            _workspaceTicks.TryGetValue(uri, out var ticks);
-            _workspaceTicks[uri] = (ticks.Close, true);
-        }
-
+        SessionOperations.ApplyToTicks(profile, _workspaceTicks);
         RefreshWorkspaces();
 
+        var wanted = new HashSet<string>(profile.Workspaces, StringComparer.OrdinalIgnoreCase);
         var shown = WorkspaceRowsInGrid().Count(row => row.Open);
         var hidden = wanted.Count - shown;
         var suffix = hidden <= 0 ? string.Empty : $" ({hidden} not in the current list - Open Ticked still opens them)";
@@ -1318,19 +1175,7 @@ internal sealed class MainForm : KryptonForm
         }
 
         ApplyWorkspaceProfile(profile);
-
-        // Straight from the profile, so a workspace hidden by the current filter still opens.
-        var names = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var row in WorkspaceRowsInGrid())
-        {
-            names[row.Uri] = row.Name;
-        }
-
-        var workspaces = profile.Workspaces
-            .Select(uri => (Uri: uri, Name: names.TryGetValue(uri, out var name) ? name : VsCodeUri.Describe(uri).DisplayName))
-            .ToList();
-
-        await OpenWorkspacesAsync(workspaces);
+        await OpenWorkspacesAsync(SessionOperations.ResolveNames(profile, WorkspaceRowsInGrid()));
     }
 
     private void RebuildWorkspaceProfileControls()
@@ -1405,46 +1250,14 @@ internal sealed class MainForm : KryptonForm
         }
     }
 
-    /// <summary>Preferred is a stated preference, so unlike the Kill/Restart ticks it is saved at once.</summary>
     private void TogglePreferred(WorkspaceRow row)
     {
-        var existing = _config.Workspaces
-            .FirstOrDefault(workspace => string.Equals(workspace.Uri, row.Uri, StringComparison.OrdinalIgnoreCase));
-
-        if (existing is null)
-        {
-            _config.Workspaces.Add(new WorkspaceFavorite { Name = row.Name, Uri = row.Uri });
-            LogMessage($"Added {row.Name} to the preferred workspaces.");
-        }
-        else
-        {
-            _config.Workspaces.Remove(existing);
-            LogMessage($"Removed {existing.Name} from the preferred workspaces.");
-        }
-
+        WorkspaceController.TogglePreferred(_config, row, LogMessage);
         SaveConfiguration();
         RefreshWorkspaces();
     }
 
-    private void LaunchWorkspace(WorkspaceRow row)
-    {
-        var executable = VsCodeLauncher.ResolveExecutable(_config.VsCodeExecutable);
-        if (executable is null)
-        {
-            LogMessage("Could not find VS Code. Set \"VsCodeExecutable\" in the configuration file.");
-            return;
-        }
-
-        try
-        {
-            Process.Start(VsCodeLauncher.CreateStartInfo(executable, VsCodeLauncher.BuildArguments(row.Uri, row.Kind)));
-            LogMessage(row.IsOpen ? $"Focusing {row.Name}..." : $"Launching {row.Name}...");
-        }
-        catch (Exception ex)
-        {
-            LogMessage($"Failed to launch {row.Name}: {ex.Message}");
-        }
-    }
+    private void LaunchWorkspace(WorkspaceRow row) => WorkspaceController.Launch(row, _config.VsCodeExecutable, LogMessage);
 
     // ------------------------------------------------------------------ misc
 
