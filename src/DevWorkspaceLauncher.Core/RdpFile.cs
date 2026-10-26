@@ -137,6 +137,11 @@ public static class RdpFileWriter
             Set($"desktopscalefactor:i:{zoom}");
         }
 
+        if (settings.Drives is { } drives)
+        {
+            Set($"drivestoredirect:s:{DriveList(drives)}");
+        }
+
         if (Username(settings) is { } username)
         {
             Set($"username:s:{username}");
@@ -165,6 +170,63 @@ public static class RdpFileWriter
         return string.IsNullOrWhiteSpace(settings.Domain) || user.Contains('\\') || user.Contains('@')
             ? user
             : $"{settings.Domain}\\{user}";
+    }
+
+    /// <summary>
+    /// Turns a <see cref="RdpSettings.Drives"/> spec into the <c>drivestoredirect</c> value: <c>*</c>
+    /// stays <c>*</c>; letters and drive types become <c>C:\;D:\</c>, <c>dynamic</c> becomes
+    /// <c>DynamicDrives</c>, and a <c>-</c> item takes a drive out again.
+    /// </summary>
+    public static string DriveList(string spec, IEnumerable<(string Letter, DriveType Type)>? localDrives = null)
+    {
+        var items = spec.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (items.Length == 0 || items.Contains("*"))
+        {
+            return "*";
+        }
+
+        localDrives ??= DriveInfo.GetDrives().Select(drive => (drive.Name[..2].ToUpperInvariant(), drive.DriveType));
+        var known = localDrives.ToList();
+        var chosen = new List<string>();
+        var dynamic = false;
+
+        foreach (var item in items)
+        {
+            var exclude = item.StartsWith('-');
+            var name = item.TrimStart('-').ToLowerInvariant();
+            IEnumerable<string> letters = name switch
+            {
+                "fixed" => known.Where(d => d.Type == DriveType.Fixed).Select(d => d.Letter),
+                "removable" => known.Where(d => d.Type == DriveType.Removable).Select(d => d.Letter),
+                "network" => known.Where(d => d.Type == DriveType.Network).Select(d => d.Letter),
+                "cdrom" => known.Where(d => d.Type == DriveType.CDRom).Select(d => d.Letter),
+                "dynamic" => [],
+                _ when name.Length is 1 or 2 && char.IsLetter(name[0]) => [$"{char.ToUpperInvariant(name[0])}:"],
+                _ => []
+            };
+
+            if (name == "dynamic")
+            {
+                dynamic = !exclude;
+            }
+
+            foreach (var letter in letters)
+            {
+                chosen.Remove(letter);
+                if (!exclude)
+                {
+                    chosen.Add(letter);
+                }
+            }
+        }
+
+        var list = chosen.Select(letter => letter + "\\").ToList();
+        if (dynamic)
+        {
+            list.Add("DynamicDrives");
+        }
+
+        return string.Join(";", list);
     }
 
     /// <summary>The key of a <c>key:type:value</c> line, or null for a blank or malformed one.</summary>

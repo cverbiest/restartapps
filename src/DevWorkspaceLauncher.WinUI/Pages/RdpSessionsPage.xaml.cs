@@ -123,6 +123,56 @@ public sealed partial class RdpSessionsPage : Page
 
     private void Credentials_Click(object sender, RoutedEventArgs e) => CredentialStore.OpenManager(State.LogMessage);
 
+    private async void Import_Click(object sender, RoutedEventArgs e)
+    {
+        var picker = new Windows.Storage.Pickers.FileOpenPicker();
+        picker.FileTypeFilter.Add(".txt");
+        picker.FileTypeFilter.Add("*");
+        WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(App.MainWindow));
+        var file = await picker.PickSingleFileAsync();
+        if (file is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var entries = RdpPlusImport.ParseListing(await File.ReadAllTextAsync(file.Path));
+            if (entries.Count == 0)
+            {
+                State.LogMessage($"Could not find any favorites in {file.Path}. Write it with tools\\Export-RdpPlusFavorites.ps1.");
+                return;
+            }
+
+            var result = RdpPlusImport.AddTo(State.Config, entries);
+            foreach (var entry in entries.Where(entry => entry.Unsupported.Count > 0))
+            {
+                State.LogMessage($"Imported '{entry.Name}' without {string.Join(" ", entry.Unsupported)} (not supported yet).");
+            }
+
+            if (result.Skipped.Count > 0)
+            {
+                State.LogMessage($"Skipped {result.Skipped.Count} favorite(s) whose name is already a session: {string.Join(", ", result.Skipped)}.");
+            }
+
+            if (result.Added.Count > 0)
+            {
+                State.Save();
+            }
+
+            var credentials = result.Added.Select(session => session.Credential).OfType<string>()
+                .Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase).ToList();
+            var missing = credentials.Where(name => CredentialStore.ReadGeneric(name) is null).ToList();
+            var suffix = missing.Count == 0 ? string.Empty
+                : $" Add these generic credentials in Credential Manager: {string.Join(", ", missing)}.";
+            State.LogMessage($"Imported {result.Added.Count} RDP session(s) from Remote Desktop Plus.{suffix}");
+        }
+        catch (Exception ex)
+        {
+            State.LogMessage($"Failed to import {file.Path}: {ex.Message}");
+        }
+    }
+
     /// <summary>
     /// Shows the session's fields in a dialog and writes them back on OK. Only the common fields are
     /// here; anything else (raw options, a base .rdp file, display overrides) is edited in the file.
@@ -158,6 +208,11 @@ public sealed partial class RdpSessionsPage : Page
             Minimum = 1,
             SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact
         };
+        var windowTitle = new TextBox
+        {
+            Header = "Window title (optional; %s = computer, %u = user)",
+            Text = session.Title ?? string.Empty
+        };
         var admin = new CheckBox { Content = "Admin / console session", IsChecked = session.Admin == true };
         var error = new TextBlock { Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["SystemFillColorCriticalBrush"] };
 
@@ -165,7 +220,7 @@ public sealed partial class RdpSessionsPage : Page
         {
             XamlRoot = XamlRoot,
             Title = title,
-            Content = new StackPanel { Spacing = 8, MinWidth = 400, Children = { name, host, credential, username, size, monitor, admin, error } },
+            Content = new StackPanel { Spacing = 8, MinWidth = 400, Children = { name, host, credential, username, size, monitor, windowTitle, admin, error } },
             PrimaryButtonText = "OK",
             CloseButtonText = "Cancel",
             DefaultButton = ContentDialogButton.Primary
@@ -194,6 +249,7 @@ public sealed partial class RdpSessionsPage : Page
         session.Username = NullIfEmpty(username.Text);
         session.Size = size.SelectedItem as string is { } chosen && chosen != DefaultSize ? chosen : null;
         session.Monitor = double.IsNaN(monitor.Value) ? null : (int)monitor.Value;
+        session.Title = NullIfEmpty(windowTitle.Text);
         session.Admin = admin.IsChecked == true ? true : null;
         return true;
     }

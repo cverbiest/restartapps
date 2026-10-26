@@ -21,6 +21,9 @@ public partial class App : Application
     /// <summary>The state shared by the window and its pages.</summary>
     public static AppState State { get; } = new();
 
+    /// <summary>The main window, for pickers that need its handle. Null when run as a command line.</summary>
+    public static Window? MainWindow => ((App)Current)._window;
+
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
         var commandLine = Environment.GetCommandLineArgs().Skip(1).ToArray();
