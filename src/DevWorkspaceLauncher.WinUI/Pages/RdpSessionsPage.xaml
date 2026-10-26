@@ -53,6 +53,13 @@
                     <TextBlock Text="Credentials" />
                 </StackPanel>
             </Button>
+            <Button Click="Import_Click"
+                    ToolTipService.ToolTip="Add sessions from a Remote Desktop Plus favorites listing written by tools\Export-RdpPlusFavorites.ps1. Existing sessions are never overwritten.">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE8B5;" FontSize="14" />
+                    <TextBlock Text="Import RDP+" />
+                </StackPanel>
+            </Button>
         </StackPanel>
 
         <Grid Grid.Row="2"
@@ -97,7 +104,7 @@
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="{x:Bind Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                             <TextBlock Grid.Column="1" Text="{x:Bind Host}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                            <TextBlock Grid.Column="2" Text="{x:Bind Size}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Grid.Column="2" Text="{x:Bind SizeText}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                             <TextBlock Grid.Column="3" Text="{x:Bind Credential}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                         </Grid>
                     </DataTemplate>

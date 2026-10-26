@@ -62,3 +62,7 @@ desktop.ini
 # Brainstorming companion mockups
 .superpowers/
 Favorites Remote Desktop Plus.xml
+
+# Remote Desktop Plus favorites, decrypted for import
+rdpplus.favorites.txt
+tools/Export-RdpPlusFavorites.ps1

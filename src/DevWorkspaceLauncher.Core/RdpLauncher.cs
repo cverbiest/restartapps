@@ -209,7 +209,26 @@ public static class RdpLauncher
         }
 
         log($"Connecting to {name} ({geometry.DesktopWidth}x{geometry.DesktopHeight}{(geometry.ScreenModeId == 2 ? ", full screen" : string.Empty)}).");
-        return (mstsc, CleanUpAsync(mstsc, file, wroteCredential ? termsrv : null));
+        var cleanup = CleanUpAsync(mstsc, file, wroteCredential ? termsrv : null);
+        if (settings.Title is { } title)
+        {
+            cleanup = Task.WhenAll(cleanup, SessionWindow.KeepTitleAsync(mstsc, ExpandTitle(title, host, settings.Username)));
+        }
+
+        return (mstsc, cleanup);
+    }
+
+    /// <summary>
+    /// Expands <c>%s</c> to the computer and <c>%u</c> to the user, then local environment variables.
+    /// A <c>%s</c> or <c>%u</c> that starts a variable name, as in <c>%systemroot%</c>, is left for that.
+    /// </summary>
+    public static string ExpandTitle(string template, string host, string? user)
+    {
+        var expanded = System.Text.RegularExpressions.Regex.Replace(
+            template,
+            "%([su])(?![A-Za-z0-9_]*%)",
+            match => match.Groups[1].Value == "s" ? host : user ?? string.Empty);
+        return Environment.ExpandEnvironmentVariables(expanded);
     }
 
     private static async Task CleanUpAsync(Process mstsc, string file, string? termsrv)
@@ -275,4 +294,72 @@ public static class RdpCommand
     /// <summary>Whether <c>/batch</c> is among the arguments, so a failure is reported only by exit code.</summary>
     public static bool IsBatch(IEnumerable<string> args) =>
         args.Any(arg => string.Equals(arg, "/batch", StringComparison.OrdinalIgnoreCase));
+}
+
+/// <summary>The main window of an mstsc process.</summary>
+internal static class SessionWindow
+{
+    /// <summary>The window class of mstsc's session window, whether connecting, windowed or full screen.</summary>
+    private const string ShellClass = "TscShellContainerClass";
+
+    private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    private static extern bool EnumWindows(EnumWindowsProc callback, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    private static extern int GetWindowThreadProcessId(IntPtr hWnd, out int processId);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern int GetClassName(IntPtr hWnd, System.Text.StringBuilder name, int maxCount);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern int GetWindowText(IntPtr hWnd, System.Text.StringBuilder text, int maxCount);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern bool SetWindowText(IntPtr hWnd, string text);
+
+    /// <summary>
+    /// Sets the session window's title, and sets it again whenever mstsc changes it back - it does on
+    /// connecting and reconnecting - until mstsc exits.
+    /// </summary>
+    public static async Task KeepTitleAsync(Process mstsc, string title)
+    {
+        while (!mstsc.HasExited)
+        {
+            foreach (var window in Find(mstsc.Id))
+            {
+                var current = new System.Text.StringBuilder(512);
+                GetWindowText(window, current, current.Capacity);
+                if (current.ToString() != title)
+                {
+                    SetWindowText(window, title);
+                }
+            }
+
+            await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+        }
+    }
+
+    private static List<IntPtr> Find(int processId)
+    {
+        var found = new List<IntPtr>();
+        EnumWindows((window, _) =>
+        {
+            GetWindowThreadProcessId(window, out var owner);
+            if (owner == processId)
+            {
+                var name = new System.Text.StringBuilder(64);
+                GetClassName(window, name, name.Capacity);
+                if (name.ToString() == ShellClass)
+                {
+                    found.Add(window);
+                }
+            }
+
+            return true;
+        }, IntPtr.Zero);
+
+        return found;
+    }
 }
