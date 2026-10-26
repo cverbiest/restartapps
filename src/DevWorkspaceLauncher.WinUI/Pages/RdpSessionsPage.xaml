@@ -54,7 +54,7 @@
                 </StackPanel>
             </Button>
             <Button Click="Import_Click"
-                    ToolTipService.ToolTip="Add sessions from a Remote Desktop Plus favorites listing written by tools\Export-RdpPlusFavorites.ps1. Existing sessions are never overwritten.">
+                    ToolTipService.ToolTip="Add sessions from a decrypted Remote Desktop Plus favorites listing, one 'name | secure=False | command line' per line. Existing sessions are never overwritten.">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <FontIcon Glyph="&#xE8B5;" FontSize="14" />
                     <TextBlock Text="Import RDP+" />

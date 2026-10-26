@@ -93,10 +93,10 @@ Exit codes: 0 ok, 1 general error, 2 `.rdp` file not found, 30 credential or ses
 
 ## Import from Remote Desktop Plus (added 2026-10-26, asked for by the user)
 
-Sessions and options only, never RDP+ credential profiles. RDP+ favorites are encrypted;
-`tools/Export-RdpPlusFavorites.ps1` decrypts them with RDP+'s own routine from `rdp.exe` and writes a
-`name | secure=... | command line` listing (git-ignored as `rdpplus.favorites.txt`). The RDP sessions
-page's "Import RDP+" reads that listing. `/i:profile` becomes the session's Credential; a favorite whose
+Sessions and options only, never RDP+ credential profiles. RDP+ favorites are encrypted, so the
+import reads a decrypted listing made outside the launcher: one `name | secure=... | command line` per
+favorite (kept locally, git-ignored as `rdpplus.favorites.txt`). The RDP sessions page's
+"Import RDP+" reads that listing. `/i:profile` becomes the session's Credential; a favorite whose
 name is already a session is skipped; switches not supported are logged per favorite. The import then
 lists the credential names not yet in Credential Manager.
 

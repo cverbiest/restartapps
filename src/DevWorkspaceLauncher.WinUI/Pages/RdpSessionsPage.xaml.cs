@@ -140,7 +140,7 @@ public sealed partial class RdpSessionsPage : Page
             var entries = RdpPlusImport.ParseListing(await File.ReadAllTextAsync(file.Path));
             if (entries.Count == 0)
             {
-                State.LogMessage($"Could not find any favorites in {file.Path}. Write it with tools\\Export-RdpPlusFavorites.ps1.");
+                State.LogMessage($"Could not find any favorites in {file.Path}. Expected one 'name | secure=False | command line' per line.");
                 return;
             }
 
