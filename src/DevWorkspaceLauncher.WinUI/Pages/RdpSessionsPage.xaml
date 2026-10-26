@@ -46,6 +46,13 @@
                     <TextBlock Text="Delete" />
                 </StackPanel>
             </Button>
+            <Button Click="Credentials_Click"
+                    ToolTipService.ToolTip="Open Windows Credential Manager. Add a generic credential there and put its name in a session's Credential field.">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE8D7;" FontSize="14" />
+                    <TextBlock Text="Credentials" />
+                </StackPanel>
+            </Button>
         </StackPanel>
 
         <Grid Grid.Row="2"

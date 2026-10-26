@@ -114,6 +114,19 @@ public static class CredentialStore
     }
 
     public static void DeleteGeneric(string target) => CredDelete(target, CRED_TYPE_GENERIC, 0);
+
+    /// <summary>Opens Windows Credential Manager, where the credentials sessions refer to are kept.</summary>
+    public static void OpenManager(Action<string> log)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo("control.exe", "/name Microsoft.CredentialManager") { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            log($"Failed to open Credential Manager: {ex.Message}");
+        }
+    }
 }
 
 /// <summary>Starts mstsc for a set of resolved settings.</summary>

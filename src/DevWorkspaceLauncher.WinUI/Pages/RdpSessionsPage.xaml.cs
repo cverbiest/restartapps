@@ -121,6 +121,8 @@ public sealed partial class RdpSessionsPage : Page
         State.LogMessage($"Deleted RDP session(s) {names}.");
     }
 
+    private void Credentials_Click(object sender, RoutedEventArgs e) => CredentialStore.OpenManager(State.LogMessage);
+
     /// <summary>
     /// Shows the session's fields in a dialog and writes them back on OK. Only the common fields are
     /// here; anything else (raw options, a base .rdp file, display overrides) is edited in the file.
