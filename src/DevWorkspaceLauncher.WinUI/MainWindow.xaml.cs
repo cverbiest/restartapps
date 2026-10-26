@@ -9,12 +9,14 @@ public sealed partial class MainWindow : Window
 {
     private const string WorkspacesTag = "page:workspaces";
     private const string AppsTag = "page:apps";
+    private const string RdpTag = "page:rdp";
     private const string LogTag = "page:log";
 
     private static AppState State => App.State;
 
     private readonly NavigationViewItem _workspacesItem = Page("Workspaces", "", WorkspacesTag);
     private readonly NavigationViewItem _appsItem = Page("Apps", "", AppsTag);
+    private readonly NavigationViewItem _rdpItem = Page("RDP sessions", "", RdpTag);
     private readonly NavigationViewItem _logItem = Page("Activity log", "", LogTag);
 
     private object? _lastRunTag;
@@ -73,7 +75,17 @@ public sealed partial class MainWindow : Window
         Nav.MenuItems.Add(new NavigationViewItemSeparator());
         Nav.MenuItems.Add(_workspacesItem);
         Nav.MenuItems.Add(_appsItem);
+        Nav.MenuItems.Add(_rdpItem);
         Nav.MenuItems.Add(_logItem);
+
+        if (State.Config.RdpSessions.Count > 0)
+        {
+            Nav.MenuItems.Add(new NavigationViewItemHeader { Content = "RDP" });
+            foreach (var session in State.Config.RdpSessions)
+            {
+                Nav.MenuItems.Add(Runnable(session.Name, "", session, $"Connect to {session.Host}."));
+            }
+        }
 
         if (State.Config.WorkspaceProfiles.Count > 0)
         {
@@ -125,7 +137,7 @@ public sealed partial class MainWindow : Window
         }
 
         var tag = args.InvokedItemContainer?.Tag;
-        if (tag is Activity or WorkspaceProfile or Profile && IsRepeat(tag))
+        if (tag is Activity or WorkspaceProfile or Profile or RdpSession && IsRepeat(tag))
         {
             return;
         }
@@ -140,8 +152,16 @@ public sealed partial class MainWindow : Window
                 Show(typeof(AppsPage));
                 break;
 
+            case RdpTag:
+                Show(typeof(RdpSessionsPage));
+                break;
+
             case LogTag:
                 Show(typeof(LogPage));
+                break;
+
+            case RdpSession rdpSession:
+                State.ConnectRdp(rdpSession);
                 break;
 
             case Activity activity:

@@ -23,6 +23,10 @@ A new feature therefore goes into Core first, with tests, and then into both app
 | `ConfigurationWatcher` | Debounced, retrying reload of the configuration file, raised on the UI thread. Ignores content equal to `LastKnownJson`. |
 | `VsCodeUri`, `VsCodeWorkspaces`, `VsCodeLauncher`, `VsCodeWindows`, `WorkspaceRows` | VS Code workspace discovery, open-state probe, launching, window matching, grid rows. |
 | `WindowFinder`, `ShortcutResolver`, `CommandLineParser`, `UserEnvironment` | Win32 helpers. |
+| `RdpSession`, `RdpSizePreset`, `RdpSettings` (`RdpConfiguration.cs`) | Saved RDP connections and window size presets. |
+| `RdpCommandLine`, `RdpResolver`, `RdpPresets` | The `rdp` switches; merging preset, session and command line into one `RdpSettings`. |
+| `RdpLayout`, `RdpFileWriter`, `Displays` | Window size and position on a monitor; the generated `.rdp` text; the real monitors. |
+| `RdpLauncher`, `CredentialStore`, `RdpCommand` | Starting mstsc with a temporary `TERMSRV/` credential; the headless `rdp` command line. |
 
 ## How the WinUI app wires Core
 
@@ -79,4 +83,16 @@ Enums in the configuration (`StopMethod`, `AppAction`, `WorkspaceAction`) are re
 `CaseInsensitiveEnumConverter<T>`, whose error names the valid values.
 
 RDP sessions are expected to become a third item list on `Activity` (`RdpSessions`) with its own step
-kinds; nothing for them exists yet.
+kinds; nothing for that exists yet.
+
+## RDP sessions
+
+Design: `docs/superpowers/specs/2026-10-26-rdp-launcher-first-slice-design.md`. The launcher never
+reimplements RDP: it resolves settings (built-in or file preset → session → command line, last wins),
+writes an explicit `%TEMP%\<guid>.rdp` and starts `mstsc.exe` on it. A session names a *generic*
+credential in Windows Credential Manager; at launch its username and password are copied into a
+`TERMSRV/<host>` credential persisted for the logon session only, removed when that mstsc exits. An
+existing `TERMSRV/<host>` entry is never touched. The configuration file never holds a password.
+
+`DevWorkspaceLauncher.WinUI.exe rdp <switches>` runs without a window and exits with an RDP+-style
+exit code (0, 1, 2, 30, 87). So far only the WinUI app has the RDP sessions page.

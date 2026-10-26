@@ -46,6 +46,13 @@
   "Workspaces": [
     { "Name": "restartapps", "Uri": "file:///c%3A/cce/workspaces/restartapps" }
   ],
+  "RdpSessions": [
+    { "Name": "Build server", "Host": "build01.example.local", "Credential": "DWL:build-admin", "Size": "fit68" },
+    { "Name": "Test VM", "Host": "10.0.0.20:3390", "Credential": "DWL:test", "Size": "full", "Monitor": 2 }
+  ],
+  "RdpSizes": [
+    { "Name": "half", "Mode": "Fit", "Fit": 50 }
+  ],
   "Activities": [
     {
       "Name": "Docking",

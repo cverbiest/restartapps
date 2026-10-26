@@ -208,6 +208,21 @@ public sealed class AppState
             RaiseWorkspacesChanged();
         });
 
+    // ------------------------------------------------------------ RDP sessions
+
+    /// <summary>Starts mstsc for a saved session. The clean-up runs on after it, while this app lives.</summary>
+    public void ConnectRdp(RdpSession session)
+    {
+        try
+        {
+            RdpLauncher.Launch(RdpResolver.Resolve(Config, session), session.Name, LogMessage);
+        }
+        catch (Exception ex)
+        {
+            LogMessage($"Could not connect to '{session.Name}': {ex.Message}");
+        }
+    }
+
     private void ApplyReload(ConfigurationSnapshot snapshot)
     {
         Config = snapshot.Configuration;

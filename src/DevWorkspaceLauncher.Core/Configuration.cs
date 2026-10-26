@@ -133,6 +133,15 @@ public sealed class ConfigurationFile
     /// <summary>One-click buttons that start and stop a set of linked apps and workspaces.</summary>
     public List<Activity> Activities { get; set; } = [];
 
+    /// <summary>Saved RDP connections, in the order they are shown.</summary>
+    public List<RdpSession> RdpSessions { get; set; } = [];
+
+    /// <summary>
+    /// Window size presets for RDP sessions. One named like a built-in preset replaces it; see
+    /// <see cref="RdpPresets"/>.
+    /// </summary>
+    public List<RdpSizePreset> RdpSizes { get; set; } = [];
+
     /// <summary>Overrides where VS Code is looked for. Absent means the usual install locations.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? VsCodeExecutable { get; set; }
