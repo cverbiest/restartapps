@@ -57,6 +57,10 @@ framework-dependent, as for the WinForms app. The project sets no `Platforms`, s
 project builds share one output folder (`bin\<config>\<tfm>`); the runtime identifier pins x64.
 The publish folder is about 150 MB, most of it the Windows App SDK runtime and its resources
 (`RestartAgent.exe` in it belongs to the Windows App SDK).
+The project copies the app's own `DevWorkspaceLauncher.WinUI.pri` into the publish folder after
+publishing (target `CopyAppPriToPublishDir`): an unpackaged publish leaves it out, and without it
+the compiled XAML cannot load, so the published app dies at startup with 0xC000027B. Always start
+the *published* exe once after changing the build, not just `dotnet run`.
 
 ## Naming rules
 

@@ -27,4 +27,10 @@
   <ItemGroup>
     <ProjectReference Include="..\DevWorkspaceLauncher.Core\DevWorkspaceLauncher.Core.csproj" />
   </ItemGroup>
+
+  <!-- An unpackaged publish leaves out the app's own resource index, which holds the compiled XAML;
+       without it the published app fails at startup (0xC000027B in Microsoft.UI.Xaml.dll). -->
+  <Target Name="CopyAppPriToPublishDir" AfterTargets="Publish">
+    <Copy SourceFiles="$(OutDir)$(TargetName).pri" DestinationFolder="$(PublishDir)" />
+  </Target>
 </Project>
