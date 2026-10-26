@@ -101,7 +101,7 @@ public sealed partial class WorkspacesPage : Page
 
     // ---------------------------------------------------------------- toolbar
 
-    private async void OpenTicked_Click(object sender, RoutedEventArgs e)
+    private async void OpenSelected_Click(object sender, RoutedEventArgs e)
     {
         var ticked = _items.Where(item => item.Open).Select(item => (item.Uri, item.Name)).ToList();
         if (ticked.Count == 0)
@@ -114,7 +114,7 @@ public sealed partial class WorkspacesPage : Page
         Refresh();
     }
 
-    private async void CloseTicked_Click(object sender, RoutedEventArgs e)
+    private async void CloseSelected_Click(object sender, RoutedEventArgs e)
     {
         var ticked = _items.Where(item => item.Close && item.IsOpen).ToList();
         if (ticked.Count == 0)

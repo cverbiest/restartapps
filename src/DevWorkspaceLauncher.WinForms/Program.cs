@@ -325,7 +325,7 @@ internal sealed class MainForm : KryptonForm
         _workspaceCount.Margin = new Padding(0, 2, 6, 2);
         bar.Controls.Add(_workspaceCount, 1, 0);
 
-        _btnCloseWorkspaces.Text = "Close Ticked";
+        _btnCloseWorkspaces.Text = "Close Selected";
         _btnCloseWorkspaces.Dock = DockStyle.Fill;
         _btnCloseWorkspaces.Margin = new Padding(0, 2, 6, 2);
         _btnCloseWorkspaces.ToolTipValues.EnableToolTips = true;
@@ -334,7 +334,7 @@ internal sealed class MainForm : KryptonForm
         _btnCloseWorkspaces.Click += CloseWorkspacesButton_Click;
         bar.Controls.Add(_btnCloseWorkspaces, 2, 0);
 
-        _btnOpenWorkspaces.Text = "Open Ticked";
+        _btnOpenWorkspaces.Text = "Open Selected";
         _btnOpenWorkspaces.Dock = DockStyle.Fill;
         _btnOpenWorkspaces.Margin = new Padding(0, 2, 6, 2);
         _btnOpenWorkspaces.ToolTipValues.EnableToolTips = true;
@@ -376,13 +376,13 @@ internal sealed class MainForm : KryptonForm
             "Close",
             "Close",
             50,
-            "Include this window in Close Ticked."));
+            "Include this window in Close Selected."));
 
         _workspaceGrid.Columns.Add(CreateWorkspaceFlagColumn(
             "Open",
             "Open",
             48,
-            "Include this workspace in Open Ticked, and in a saved session."));
+            "Include this workspace in Open Selected, and in a saved session."));
 
         _workspaceGrid.Columns.Add(new KryptonDataGridViewTextBoxColumn
         {
@@ -1129,7 +1129,7 @@ internal sealed class MainForm : KryptonForm
         var wanted = new HashSet<string>(profile.Workspaces, StringComparer.OrdinalIgnoreCase);
         var shown = WorkspaceRowsInGrid().Count(row => row.Open);
         var hidden = wanted.Count - shown;
-        var suffix = hidden <= 0 ? string.Empty : $" ({hidden} not in the current list - Open Ticked still opens them)";
+        var suffix = hidden <= 0 ? string.Empty : $" ({hidden} not in the current list - Open Selected still opens them)";
         LogMessage($"Loaded session '{profile.Name}'.{suffix}");
     }
 

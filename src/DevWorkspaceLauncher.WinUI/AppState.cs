@@ -185,7 +185,7 @@ public sealed class AppState
         RaiseWorkspacesChanged();
 
         var hidden = session.Workspaces.Distinct(StringComparer.OrdinalIgnoreCase).Count() - shown;
-        var suffix = hidden <= 0 ? string.Empty : $" ({hidden} not in the current list - Open Ticked still opens them)";
+        var suffix = hidden <= 0 ? string.Empty : $" ({hidden} not in the current list - Open Selected still opens them)";
         LogMessage($"Loaded session '{session.Name}'.{suffix}");
     }
 

@@ -21,18 +21,18 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <StackPanel Orientation="Horizontal" Spacing="8">
-                <Button Click="OpenTicked_Click" Style="{StaticResource AccentButtonStyle}"
+                <Button Click="OpenSelected_Click" Style="{StaticResource AccentButtonStyle}"
                         ToolTipService.ToolTip="Open every workspace ticked Open.">
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <FontIcon Glyph="&#xE8E5;" FontSize="14" />
-                        <TextBlock Text="Open ticked" />
+                        <TextBlock Text="Open Selected" />
                     </StackPanel>
                 </Button>
-                <Button Click="CloseTicked_Click"
+                <Button Click="CloseSelected_Click"
                         ToolTipService.ToolTip="Ask the windows ticked Close to close. Never forced, so unsaved work still prompts.">
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <FontIcon Glyph="&#xE711;" FontSize="14" />
-                        <TextBlock Text="Close ticked" />
+                        <TextBlock Text="Close Selected" />
                     </StackPanel>
                 </Button>
                 <Button Click="Refresh_Click" ToolTipService.ToolTip="Re-read the workspace list and check which ones are open.">
@@ -102,9 +102,9 @@
                                 <FontIcon Glyph="{x:Bind PreferredGlyph}" FontSize="14" />
                             </Button>
                             <CheckBox Grid.Column="1" MinWidth="0" IsChecked="{x:Bind Close, Mode=OneWay}" IsEnabled="{x:Bind IsOpen}"
-                                      Click="Close_Click" ToolTipService.ToolTip="Include this window in Close ticked." />
+                                      Click="Close_Click" ToolTipService.ToolTip="Include this window in Close Selected." />
                             <CheckBox Grid.Column="2" MinWidth="0" IsChecked="{x:Bind Open, Mode=OneWay}"
-                                      Click="Open_Click" ToolTipService.ToolTip="Include this workspace in Open ticked, and in a saved session." />
+                                      Click="Open_Click" ToolTipService.ToolTip="Include this workspace in Open Selected, and in a saved session." />
                             <TextBlock Grid.Column="3" Text="{x:Bind Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                             <TextBlock Grid.Column="4" Text="{x:Bind Location}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" ToolTipService.ToolTip="{x:Bind Uri}" />

@@ -78,11 +78,11 @@ Code currently has open, and launches them:
 | Control | Effect |
 | --- | --- |
 | **Pref** | Keeps the workspace on the preferred list. Saved to the configuration file straight away. |
-| **Close** | Include this window in **Close Ticked**. Only available while the workspace is open. |
-| **Open** | Include this workspace in **Open Ticked**, and in a saved session. |
+| **Close** | Include this window in **Close Selected**. Only available while the workspace is open. |
+| **Open** | Include this workspace in **Open Selected**, and in a saved session. |
 | **Launch** / **Focus** | Opens the workspace in VS Code. One that is already open is focused rather than opened a second time. |
-| **Close Ticked** | Asks the ticked windows to close. |
-| **Open Ticked** | Opens every workspace ticked Open. |
+| **Close Selected** | Asks the ticked windows to close. |
+| **Open Selected** | Opens every workspace ticked Open. |
 | **Show all recent** | Widens the list from the preferred entries to every workspace VS Code has opened, most recent first. |
 | **Refresh** | Re-reads the list and re-checks which entries are open. |
 
@@ -140,7 +140,7 @@ to have buttons that only stop a few apps, next to buttons that start a whole wo
 | Item | Actions |
 | --- | --- |
 | App | **Start** — only if it is not already running (for a PWA: if no window with its `WindowAumid` is open). **Stop** — by its `StopMethod`. **Restart** — stop, then start. |
-| Workspace | **Open** — VS Code focuses it if it is already open. **Close** — asks the window to close, with the same one-matching-window rule as **Close Ticked**. |
+| Workspace | **Open** — VS Code focuses it if it is already open. **Close** — asks the window to close, with the same one-matching-window rule as **Close Selected**. |
 
 A run does all the stops and closes first, waits a second if anything was stopped, then does the
 starts and opens, each in the order listed. Items that cannot be done — an app name that is not in
