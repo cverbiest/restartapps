@@ -234,3 +234,64 @@ public class RdpFileWriterTests
         Assert.Equal(("S", "h", "fit68"), (session.Name, session.Host, session.Size));
     }
 }
+
+public class RdpPlusImportTests
+{
+    private const string Listing = """
+        init failed: Parameter count mismatch.
+        cce-rds01_cvb | secure=False | /v:cce-rds01.cce.local /i:cce_cvb /title:"%s (%u) – RDP"  /fit:65%
+        demo25 customers_cvb | secure=False | /v:demo25.cce.local /i:customers_cvb /title:"%s (%u) " /drives /w:1865 /h:1050
+        web | secure=False | /v:web01 /fit:90%  /i:customers_admin /o:"gatewayhostname:s:remote.example,gatewayusagemethod:i:1" /sound
+        f  cce-rds-dev01_cvb | secure=False | /v:cce-rds-dev01 /admin
+        """;
+
+    [Fact]
+    public void Listing_becomes_sessions_with_options_and_credential_references()
+    {
+        var entries = RdpPlusImport.ParseListing(Listing);
+
+        Assert.Equal(["cce-rds01_cvb", "demo25 customers_cvb", "web", "f cce-rds-dev01_cvb"], entries.Select(entry => entry.Name));
+
+        var first = entries[0].Settings;
+        Assert.Equal(("cce-rds01.cce.local", "cce_cvb", "%s (%u) – RDP"), (first.Host, first.Credential, first.Title));
+        Assert.Equal((RdpDisplayMode.Fit, 65), (first.Mode, first.Fit));
+
+        var second = entries[1].Settings;
+        Assert.Equal((RdpDisplayMode.Size, 1865, 1050, "*"), (second.Mode, second.Width, second.Height, second.Drives));
+
+        Assert.Equal(["gatewayhostname:s:remote.example", "gatewayusagemethod:i:1"], entries[2].Settings.Options);
+        Assert.Equal(["/sound"], entries[2].Unsupported);
+        Assert.True(entries[3].Settings.Admin);
+    }
+
+    [Fact]
+    public void Existing_names_are_skipped_not_overwritten()
+    {
+        var config = new ConfigurationFile { RdpSessions = [new RdpSession { Name = "WEB", Host = "keep" }] };
+
+        var result = RdpPlusImport.AddTo(config, RdpPlusImport.ParseListing(Listing));
+
+        Assert.Equal(["web"], result.Skipped);
+        Assert.Equal(3, result.Added.Count);
+        Assert.Equal("keep", config.RdpSessions[0].Host);
+    }
+
+    [Theory]
+    [InlineData("%s (%u) – RDP", @"srv (CCE\carl) – RDP")]
+    [InlineData("Michielssen %s", "Michielssen srv")]
+    [InlineData("%systemroot%", @"C:\WINDOWS")]
+    public void Title_expands_host_user_and_variables(string template, string expected)
+    {
+        Assert.Equal(expected, RdpLauncher.ExpandTitle(template, "srv", @"CCE\carl"), ignoreCase: true);
+    }
+
+    [Theory]
+    [InlineData("*", "*")]
+    [InlineData("fixed,-c:", @"D:\")]
+    [InlineData("c,dynamic", @"C:\;DynamicDrives")]
+    public void Drive_specs_become_drivestoredirect(string spec, string expected)
+    {
+        (string, DriveType)[] drives = [("C:", DriveType.Fixed), ("D:", DriveType.Fixed), ("E:", DriveType.CDRom)];
+        Assert.Equal(expected, RdpFileWriter.DriveList(spec, drives));
+    }
+}

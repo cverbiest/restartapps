@@ -112,10 +112,37 @@ public class RdpSettings : RdpDisplay
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<string>? Options { get; set; }
 
+    /// <summary>
+    /// The session window's title. <c>%s</c> is the computer, <c>%u</c> the user; other
+    /// <c>%VARIABLES%</c> are expanded locally.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Title { get; set; }
+
+    /// <summary>
+    /// Local drives to redirect: <c>*</c> for all (including ones plugged in later), or a list such as
+    /// <c>c:,fixed,-d:,dynamic</c> of letters and the types fixed, removable, network, cdrom and
+    /// dynamic, a <c>-</c> excluding.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Drives { get; set; }
+
+    /// <summary>A short description of the window size, for lists: the preset, else the mode.</summary>
+    [JsonIgnore]
+    public string SizeText => Size ?? (Mode switch
+    {
+        RdpDisplayMode.Fit => $"fit {Fit ?? RdpCommandLine.DefaultFit}%",
+        RdpDisplayMode.Size => $"{Width}x{Height}",
+        RdpDisplayMode.Max => "max",
+        _ => "full screen"
+    });
+
     /// <summary>Copies everything <paramref name="other"/> sets over this one; raw options add up.</summary>
     public void Overlay(RdpSettings other)
     {
         OverlayDisplay(other);
+        Title = other.Title ?? Title;
+        Drives = other.Drives ?? Drives;
         Host = other.Host ?? Host;
         Credential = other.Credential ?? Credential;
         Username = other.Username ?? Username;

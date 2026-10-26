@@ -49,6 +49,8 @@ public sealed class RdpCommandLine
     /// <summary>The <c>/fit</c> percentage when no number is given.</summary>
     public const int DefaultFit = 90;
 
+    private Action<string>? _unknown;
+
     public string? SessionName { get; private set; }
 
     /// <summary>What the switches set; absent switches stay null.</summary>
@@ -60,9 +62,13 @@ public sealed class RdpCommandLine
     /// <summary>Report problems only through the exit code, never in a dialog.</summary>
     public bool Batch { get; private set; }
 
-    public static RdpCommandLine Parse(IEnumerable<string> args)
+    /// <summary>
+    /// Parses the arguments. An unknown switch is invalid, unless <paramref name="unknown"/> is given:
+    /// then it is handed there and skipped, which is how an import reports what it could not take over.
+    /// </summary>
+    public static RdpCommandLine Parse(IEnumerable<string> args, Action<string>? unknown = null)
     {
-        var result = new RdpCommandLine();
+        var result = new RdpCommandLine { _unknown = unknown };
         var first = true;
 
         foreach (var arg in args)
@@ -101,6 +107,8 @@ public sealed class RdpCommandLine
                 settings.Host = Required(name, value);
                 break;
             case "cred":
+            case "i":
+                // /i is RDP+'s credential profile; here it names the Credential Manager entry.
                 settings.Credential = Required(name, value);
                 break;
             case "u":
@@ -150,9 +158,59 @@ public sealed class RdpCommandLine
             case "batch":
                 Batch = true;
                 break;
+            case "title":
+                settings.Title = Required(name, value);
+                break;
+            case "drives":
+                settings.Drives = string.IsNullOrWhiteSpace(value) ? "*" : value.Trim().Trim('"');
+                break;
             default:
-                throw Invalid($"Unknown switch '/{name}'.");
+                if (_unknown is null)
+                {
+                    throw Invalid($"Unknown switch '/{name}'.");
+                }
+
+                _unknown(value is null ? $"/{name}" : $"/{name}:{value}");
+                break;
         }
+    }
+
+    /// <summary>
+    /// Splits one command-line string into arguments on spaces, keeping quoted parts together - so
+    /// <c>/title:"%s (%u)"</c> stays one argument, quotes included.
+    /// </summary>
+    public static List<string> Tokenize(string commandLine)
+    {
+        var args = new List<string>();
+        var current = new StringBuilder();
+        var quoted = false;
+        foreach (var c in commandLine)
+        {
+            if (c == '"')
+            {
+                quoted = !quoted;
+                current.Append(c);
+            }
+            else if (char.IsWhiteSpace(c) && !quoted)
+            {
+                if (current.Length > 0)
+                {
+                    args.Add(current.ToString());
+                    current.Clear();
+                }
+            }
+            else
+            {
+                current.Append(c);
+            }
+        }
+
+        if (current.Length > 0)
+        {
+            args.Add(current.ToString());
+        }
+
+        return args;
     }
 
     /// <summary>Splits <c>key:type:value,...</c> on commas, where <c>\,</c> is a literal comma.</summary>

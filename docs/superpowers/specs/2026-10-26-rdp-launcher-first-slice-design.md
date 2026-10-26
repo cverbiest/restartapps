@@ -69,6 +69,9 @@ All parse into one `RdpOptions` model. The other plan layers slot in later in fr
 | `/zoom:percent` | `desktopscalefactor` |
 | `/admin`, `/console` | mstsc `/admin` |
 | `/o:"key:type:value,..."` | Raw `.rdp` options; native settings win; `\,` escapes a comma |
+| `/title:"text"` | Window title; `%s` computer, `%u` user, local `%VARS%` expanded; kept while mstsc runs |
+| `/drives[:spec]` | Redirect drives: all, or letters / fixed, removable, network, cdrom, dynamic; `-` excludes |
+| `/i:name` | RDP+ spelling of `/cred:name` |
 | `/wait` | Wait for mstsc to exit |
 | first argument ending in `.rdp` | Base connection file |
 
@@ -88,6 +91,18 @@ Exit codes: 0 ok, 1 general error, 2 `.rdp` file not found, 30 credential or ses
 4. Start `mstsc.exe "<file>" [/admin]`. Delete the `.rdp` file after 10 s.
 5. Remove the `TERMSRV/<host>` credential when that mstsc process exits.
 
+## Import from Remote Desktop Plus (added 2026-10-26, asked for by the user)
+
+Sessions and options only, never RDP+ credential profiles. RDP+ favorites are encrypted;
+a local, git-ignored export script decrypts them with RDP+'s own routine from `rdp.exe` and writes a
+`name | secure=... | command line` listing (git-ignored as `rdpplus.favorites.txt`). The RDP sessions
+page's "Import RDP+" reads that listing. `/i:profile` becomes the session's Credential; a favorite whose
+name is already a session is skipped; switches not supported are logged per favorite. The import then
+lists the credential names not yet in Credential Manager.
+
+What the user's 35 favorites use, which set the priorities that followed: `/v` 35, `/title` 34, `/i` 32,
+`/fit` 24, `/w /h` 11, `/drives` 7, `/o` (gateway) 4, `/admin` 2. Nothing else.
+
 ## Calls made by the builder (not the user)
 
 - `authentication level` is **not** forced to 0 (the plan suggested it): that would hide
@@ -99,3 +114,7 @@ Exit codes: 0 ok, 1 general error, 2 `.rdp` file not found, 30 credential or ses
   if the launcher is closed first.
 - `/cred:name` replaces RDP+'s `/p` and `/pe`, which carry the password itself.
 - CLI lives in the WinUI executable behind an `rdp` verb, to keep one portable exe.
+- The command-line process stays (without a window) until mstsc exits whenever it wrote a credential or
+  keeps a title; otherwise it exits after the temporary file is deleted.
+- The import reads the decrypted listing rather than decrypting inside the launcher: it is a one-time
+  move, and it keeps RDP+'s key out of the launcher.
