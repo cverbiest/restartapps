@@ -63,6 +63,9 @@ can be marked as favorite = on start page and tray **done** (pin on All items, A
 * Apps tab: only the app definitions (add, edit, delete, drop exe/shortcut files); multi-select with
   Start / Stop / Restart instead of the Kill/Restart ticks and the Profile menu **done**
 * Workspaces tab: the Session menu goes **done** (Open / Close act on the selected rows, no more ticks)
+* Running "Develop workspaces" did not open the cce-dev03 workspace: when the launcher was started from
+  inside VS Code, the `ELECTRON_RUN_AS_NODE` it inherited made Code.exe exit without opening anything
+  **done** (no longer passed on to VS Code)
 * Later: activities inside activities
 
 ## system tray

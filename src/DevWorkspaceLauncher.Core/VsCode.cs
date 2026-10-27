@@ -362,24 +362,26 @@ public static class VsCodeLauncher
     public static ProcessStartInfo CreateStartInfo(string executable, string arguments)
     {
         // A .cmd shim is not an executable image, so it has to go through the command processor.
-        if (!executable.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
-        {
-            return new ProcessStartInfo
+        var info = executable.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
+            ? new ProcessStartInfo
+            {
+                FileName = executable,
+                Arguments = arguments,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            }
+            : new ProcessStartInfo
             {
                 FileName = "cmd.exe",
                 Arguments = $"/c \"\"{executable}\" {arguments}\"",
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
-        }
 
-        return new ProcessStartInfo
-        {
-            FileName = executable,
-            Arguments = arguments,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
+        // Set when this app was started from inside VS Code (its terminal, a debug session). Code.exe
+        // then runs as plain Node, rejects --file-uri and exits without opening a window.
+        info.Environment.Remove("ELECTRON_RUN_AS_NODE");
+        return info;
     }
 }
 
