@@ -11,7 +11,13 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <TextBlock Text="Start" Style="{StaticResource TitleTextBlockStyle}" />
+        <StackPanel>
+            <TextBlock Text="Start" Style="{StaticResource TitleTextBlockStyle}" />
+            <TextBlock
+                Text="Your favorites, in the order of the tray menu. Click a tile to run it; drag tiles to reorder them, or right-click a tile to move or unpin it."
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                TextWrapping="Wrap" />
+        </StackPanel>
 
         <TextBlock
             x:Name="Empty"
@@ -21,7 +27,8 @@
             TextWrapping="Wrap"
             Text="No favorites yet. Pin items on the All items, Activities, Apps or RDP sessions tab to show them here and in the tray menu." />
 
-        <GridView x:Name="Tiles" Grid.Row="1" SelectionMode="None" IsItemClickEnabled="True" ItemClick="Tiles_ItemClick">
+        <GridView x:Name="Tiles" Grid.Row="1" SelectionMode="None" IsItemClickEnabled="True" ItemClick="Tiles_ItemClick"
+                  CanDragItems="True" CanReorderItems="True" AllowDrop="True" DragItemsCompleted="Tiles_DragItemsCompleted">
             <GridView.ItemTemplate>
                 <DataTemplate x:DataType="local:LaunchItem">
                     <Grid Width="168" Height="104" Padding="12" RowSpacing="6"
@@ -30,6 +37,20 @@
                           Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                           CornerRadius="6"
                           ToolTipService.ToolTip="{x:Bind Tooltip}">
+                        <Grid.ContextFlyout>
+                            <MenuFlyout>
+                                <MenuFlyoutItem Text="Move first" Tag="first" Click="Move_Click" />
+                                <MenuFlyoutItem Text="Move earlier" Tag="earlier" Click="Move_Click" />
+                                <MenuFlyoutItem Text="Move later" Tag="later" Click="Move_Click" />
+                                <MenuFlyoutItem Text="Move last" Tag="last" Click="Move_Click" />
+                                <MenuFlyoutSeparator />
+                                <MenuFlyoutItem Text="Unpin" Click="Unpin_Click">
+                                    <MenuFlyoutItem.Icon>
+                                        <FontIcon Glyph="&#xE77A;" />
+                                    </MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
+                            </MenuFlyout>
+                        </Grid.ContextFlyout>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />

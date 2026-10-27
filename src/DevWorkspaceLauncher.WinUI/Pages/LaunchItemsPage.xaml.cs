@@ -71,7 +71,7 @@ public sealed partial class LaunchItemsPage : Page
     {
         if (sender is FrameworkElement { DataContext: LaunchItem item })
         {
-            item.Favorite = !item.Favorite;
+            FavoriteOrdering.Toggle(item.Target);
             State.Save();
         }
     }

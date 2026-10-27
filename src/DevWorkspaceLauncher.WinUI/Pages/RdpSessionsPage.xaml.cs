@@ -90,7 +90,7 @@ public sealed partial class RdpSessionsPage : Page
     {
         if (sender is FrameworkElement { DataContext: RdpSession session })
         {
-            session.Favorite = !session.Favorite;
+            FavoriteOrdering.Toggle(session);
             State.Save();
         }
     }

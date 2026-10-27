@@ -158,11 +158,15 @@ public class RdpSettings : RdpDisplay
 }
 
 /// <summary>A saved RDP connection, shown on the RDP sessions page.</summary>
-public sealed class RdpSession : RdpSettings
+public sealed class RdpSession : RdpSettings, IFavorite
 {
     public required string Name { get; set; }
 
     /// <summary>Shown on the start page and in the tray menu.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool Favorite { get; set; }
+
+    /// <summary>Its place among the favorites; see <see cref="IFavorite.FavoriteOrder"/>.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int FavoriteOrder { get; set; }
 }

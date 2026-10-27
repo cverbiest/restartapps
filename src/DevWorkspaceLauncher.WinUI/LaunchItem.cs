@@ -9,25 +9,21 @@ public sealed class LaunchItem
     private const string PinnedGlyph = "";
     private const string UnpinnedGlyph = "";
 
-    private readonly Func<bool> _getFavorite;
-    private readonly Action<bool> _setFavorite;
     private readonly Action _run;
 
-    private LaunchItem(object target, string kind, string glyph, string tooltip, Func<bool> getFavorite, Action<bool> setFavorite, Action run)
+    private LaunchItem(IFavorite target, string kind, string glyph, string tooltip, Action run)
     {
         Target = target;
         Kind = kind;
         Glyph = glyph;
         Tooltip = tooltip;
-        _getFavorite = getFavorite;
-        _setFavorite = setFavorite;
         _run = run;
     }
 
     private static AppState State => App.State;
 
     /// <summary>The configuration object: an <see cref="Activity"/>, <see cref="AppConfiguration"/> or <see cref="RdpSession"/>.</summary>
-    public object Target { get; }
+    public IFavorite Target { get; }
 
     public string Name => ItemActions.NameOf(Target);
 
@@ -39,12 +35,8 @@ public sealed class LaunchItem
     /// <summary>What running it does.</summary>
     public string Tooltip { get; }
 
-    /// <summary>On the start page and in the tray menu. Writes through to the configuration object.</summary>
-    public bool Favorite
-    {
-        get => _getFavorite();
-        set => _setFavorite(value);
-    }
+    /// <summary>On the start page and in the tray menu.</summary>
+    public bool Favorite => Target.Favorite;
 
     public string FavoriteGlyph => PinGlyph(Favorite);
 
@@ -63,12 +55,10 @@ public sealed class LaunchItem
         .. config.Apps.Where(app => !app.Disabled).Select(app => new LaunchItem(
             app, "App", "",
             $"Start {app.Name}, or bring it to the front when it is running.",
-            () => app.Favorite, value => app.Favorite = value,
             () => State.StartOrFocusApp(app))),
         .. config.RdpSessions.Select(session => new LaunchItem(
             session, "RDP session", "",
             $"Connect to {session.Host}.",
-            () => session.Favorite, value => session.Favorite = value,
             () => State.ConnectRdp(session)))
     ];
 
@@ -76,10 +66,10 @@ public sealed class LaunchItem
         config.Activities.Select(activity => new LaunchItem(
             activity, "Activity", "",
             Describe(activity),
-            () => activity.Favorite, value => activity.Favorite = value,
             () => _ = State.RunActivityAsync(activity)));
 
-    public static IEnumerable<LaunchItem> Favorites(ConfigurationFile config) => All(config).Where(item => item.Favorite);
+    /// <summary>The favorites in their start page order, which the tray menu follows too.</summary>
+    public static IReadOnlyList<LaunchItem> Favorites(ConfigurationFile config) => FavoriteOrdering.Order(All(config), item => item.Target);
 
     /// <summary>The pin glyph for a favorite flag, for lists that bind the configuration objects directly.</summary>
     public static string PinGlyph(bool favorite) => favorite ? PinnedGlyph : UnpinnedGlyph;

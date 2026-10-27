@@ -44,7 +44,7 @@ public abstract class CaseInsensitiveEnumConverter<TEnum>(string propertyName) :
 
 public sealed class StopMethodConverter() : CaseInsensitiveEnumConverter<StopMethod>("StopMethod");
 
-public sealed class AppConfiguration
+public sealed class AppConfiguration : IFavorite
 {
     public required string Name { get; set; }
 
@@ -63,6 +63,10 @@ public sealed class AppConfiguration
     /// <summary>Shown on the start page and in the tray menu, where it starts the app or brings it to the front.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool Favorite { get; set; }
+
+    /// <summary>Its place among the favorites; see <see cref="IFavorite.FavoriteOrder"/>.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int FavoriteOrder { get; set; }
 
     [JsonConverter(typeof(StopMethodConverter))]
     public StopMethod StopMethod { get; set; } = StopMethod.Process;

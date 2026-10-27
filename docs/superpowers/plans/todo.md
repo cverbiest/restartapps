@@ -18,6 +18,8 @@ can be marked as favorite = on start page and tray **done** (pin on All items, A
 ## Start page
 
 * buttons/icons to start items, **done** (a tile per favorite)
+* order of the start items **done** (drag tiles, or right-click: move first / earlier / later / last,
+  unpin; the tray menu follows the same order, a new pin goes last)
 * some status info, e.g. current active networks : wired, wifi, vpn
 
 ## Launcher window

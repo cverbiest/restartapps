@@ -103,7 +103,7 @@ public sealed partial class AppsPage : Page
     {
         if (sender is FrameworkElement { DataContext: AppItem item })
         {
-            item.App.Favorite = !item.App.Favorite;
+            FavoriteOrdering.Toggle(item.App);
             State.Save();
         }
     }
