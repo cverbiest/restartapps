@@ -161,4 +161,8 @@ public class RdpSettings : RdpDisplay
 public sealed class RdpSession : RdpSettings
 {
     public required string Name { get; set; }
+
+    /// <summary>Shown on the start page and in the tray menu.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Favorite { get; set; }
 }

@@ -60,6 +60,10 @@ public sealed class AppConfiguration
     /// <summary>Hidden from the grid and ignored by every action, but kept in the file.</summary>
     public bool Disabled { get; set; }
 
+    /// <summary>Shown on the start page and in the tray menu, where it starts the app or brings it to the front.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Favorite { get; set; }
+
     [JsonConverter(typeof(StopMethodConverter))]
     public StopMethod StopMethod { get; set; } = StopMethod.Process;
 
@@ -82,6 +86,11 @@ public sealed class AppConfiguration
 public sealed class Profile
 {
     public required string Name { get; set; }
+
+    /// <summary>Shown on the start page and in the tray menu.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Favorite { get; set; }
+
     public List<ProfileEntry> Entries { get; set; } = [];
 }
 
@@ -115,6 +124,11 @@ public sealed class WorkspaceProfile
 {
     public required string Name { get; set; }
 
+    /// <summary>Shown on the start page and in the tray menu.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Favorite { get; set; }
+
+
     /// <summary>The URIs to open, in the order they are opened.</summary>
     public List<string> Workspaces { get; set; } = [];
 }
@@ -122,12 +136,17 @@ public sealed class WorkspaceProfile
 public sealed class ConfigurationFile
 {
     public List<AppConfiguration> Apps { get; set; } = [];
+
+    /// <summary>App profiles. The WinUI app converts them into activities (<see cref="ActivityMigration"/>).</summary>
     public List<Profile> Profiles { get; set; } = [];
 
     /// <summary>The preferred VS Code workspaces, in the order they are shown.</summary>
     public List<WorkspaceFavorite> Workspaces { get; set; } = [];
 
-    /// <summary>Named sets of workspaces to open together.</summary>
+    /// <summary>
+    /// Named sets of workspaces to open together. The WinUI app converts them into activities
+    /// (<see cref="ActivityMigration"/>).
+    /// </summary>
     public List<WorkspaceProfile> WorkspaceProfiles { get; set; } = [];
 
     /// <summary>One-click buttons that start and stop a set of linked apps and workspaces.</summary>

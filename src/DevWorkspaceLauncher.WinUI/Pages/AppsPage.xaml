@@ -15,38 +15,63 @@
         <StackPanel>
             <TextBlock Text="Apps" Style="{StaticResource TitleTextBlockStyle}" />
             <TextBlock
-                Text="Tick Kill to stop an app, Restart to start it again. Drop an executable or shortcut on the window to add it."
+                Text="The apps the launcher knows. Drop an executable or shortcut here to add it. Select apps to start, stop or restart them, or add them to an activity."
                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                 TextWrapping="Wrap" />
         </StackPanel>
 
-        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
-            <Button x:Name="KillAndStart" Click="KillAndStart_Click" Style="{StaticResource AccentButtonStyle}"
-                    ToolTipService.ToolTip="Stop the apps ticked Kill, then start the ones ticked Restart.">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <FontIcon Glyph="&#xE768;" FontSize="14" />
-                    <TextBlock Text="Kill &amp; Start Selected" />
-                </StackPanel>
-            </Button>
-            <Button x:Name="RestartSelected" Click="RestartSelected_Click"
-                    ToolTipService.ToolTip="Stop and start the apps ticked Restart, whatever their Kill tick.">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <FontIcon Glyph="&#xE72C;" FontSize="14" />
-                    <TextBlock Text="Restart Selected" />
-                </StackPanel>
-            </Button>
-            <Button Click="EditConfig_Click" ToolTipService.ToolTip="Open the configuration file in its editor.">
-                <StackPanel Orientation="Horizontal" Spacing="8">
+        <Grid Grid.Row="1" ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button x:Name="StartButton" Click="Start_Click" Style="{StaticResource AccentButtonStyle}"
+                        ToolTipService.ToolTip="Start the selected apps that are not running.">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE768;" FontSize="14" />
+                        <TextBlock Text="Start" />
+                    </StackPanel>
+                </Button>
+                <Button x:Name="StopButton" Click="Stop_Click" ToolTipService.ToolTip="Stop the selected apps.">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE71A;" FontSize="14" />
+                        <TextBlock Text="Stop" />
+                    </StackPanel>
+                </Button>
+                <Button x:Name="RestartButton" Click="Restart_Click" ToolTipService.ToolTip="Stop the selected apps, then start them again.">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE72C;" FontSize="14" />
+                        <TextBlock Text="Restart" />
+                    </StackPanel>
+                </Button>
+                <Button Click="Add_Click" ToolTipService.ToolTip="Add an app.">
+                    <FontIcon Glyph="&#xE710;" FontSize="14" />
+                </Button>
+                <Button Click="Edit_Click" ToolTipService.ToolTip="Edit the selected app.">
                     <FontIcon Glyph="&#xE70F;" FontSize="14" />
-                    <TextBlock Text="Edit Config" />
-                </StackPanel>
-            </Button>
-            <DropDownButton x:Name="ProfileButton" Content="Profile">
-                <DropDownButton.Flyout>
-                    <MenuFlyout x:Name="ProfileMenu" Placement="Bottom" />
-                </DropDownButton.Flyout>
-            </DropDownButton>
-        </StackPanel>
+                </Button>
+                <Button Click="Delete_Click" ToolTipService.ToolTip="Delete the selected apps.">
+                    <FontIcon Glyph="&#xE74D;" FontSize="14" />
+                </Button>
+                <DropDownButton ToolTipService.ToolTip="Add the selected apps to an activity (as Start).">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE8F4;" FontSize="14" />
+                        <TextBlock Text="Add to activity" />
+                    </StackPanel>
+                    <DropDownButton.Flyout>
+                        <MenuFlyout x:Name="ActivityMenu" Placement="Bottom" />
+                    </DropDownButton.Flyout>
+                </DropDownButton>
+                <Button Click="Refresh_Click" ToolTipService.ToolTip="Check again which apps are running.">
+                    <FontIcon Glyph="&#xE72C;" FontSize="14" />
+                </Button>
+                <Button Click="EditConfig_Click" ToolTipService.ToolTip="Open the configuration file in its editor.">
+                    <FontIcon Glyph="&#xE943;" FontSize="14" />
+                </Button>
+            </StackPanel>
+            <TextBox x:Name="Search" Grid.Column="1" Width="240" PlaceholderText="Search" TextChanged="Search_TextChanged" />
+        </Grid>
 
         <Grid Grid.Row="2"
               BorderThickness="1"
@@ -58,19 +83,34 @@
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-            <!-- The header row and the item template use the same column widths, so the columns line up. -->
-            <Grid Padding="12,8" ColumnSpacing="8">
+            <!-- The header row and the item template use the same column widths, so the columns line up.
+                 Clicking a header sorts by its column (ColumnSort). -->
+            <Grid Padding="12,4" ColumnSpacing="8">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="64" />
-                    <ColumnDefinition Width="64" />
+                    <ColumnDefinition Width="44" />
+                    <ColumnDefinition Width="2*" />
+                    <ColumnDefinition Width="3*" />
+                    <ColumnDefinition Width="2*" />
+                    <ColumnDefinition Width="72" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="Application" Style="{StaticResource CaptionTextBlockStyle}" />
-                <TextBlock Grid.Column="1" Text="Kill" Style="{StaticResource CaptionTextBlockStyle}" />
-                <TextBlock Grid.Column="2" Text="Restart" Style="{StaticResource CaptionTextBlockStyle}" />
+                <Button x:Name="FavHeader" Style="{StaticResource SortHeader}">
+                    <TextBlock Text="Fav" Style="{StaticResource CaptionTextBlockStyle}" />
+                </Button>
+                <Button x:Name="NameHeader" Grid.Column="1" Style="{StaticResource SortHeader}">
+                    <TextBlock Text="Application" Style="{StaticResource CaptionTextBlockStyle}" />
+                </Button>
+                <Button x:Name="CommandHeader" Grid.Column="2" Style="{StaticResource SortHeader}">
+                    <TextBlock Text="Command line" Style="{StaticResource CaptionTextBlockStyle}" />
+                </Button>
+                <Button x:Name="StopHeader" Grid.Column="3" Style="{StaticResource SortHeader}">
+                    <TextBlock Text="Stops by" Style="{StaticResource CaptionTextBlockStyle}" />
+                </Button>
+                <Button x:Name="StatusHeader" Grid.Column="4" Style="{StaticResource SortHeader}">
+                    <TextBlock Text="Status" Style="{StaticResource CaptionTextBlockStyle}" />
+                </Button>
             </Grid>
 
-            <ListView x:Name="List" Grid.Row="1" SelectionMode="None">
+            <ListView x:Name="List" Grid.Row="1" SelectionMode="Extended" IsDoubleTapEnabled="True" DoubleTapped="List_DoubleTapped">
                 <ListView.ItemContainerStyle>
                     <Style TargetType="ListViewItem">
                         <Setter Property="Padding" Value="12,0" />
@@ -81,15 +121,24 @@
                     <DataTemplate x:DataType="local:AppItem">
                         <Grid ColumnSpacing="8" MinHeight="40">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="64" />
-                                <ColumnDefinition Width="64" />
+                                <ColumnDefinition Width="44" />
+                                <ColumnDefinition Width="2*" />
+                                <ColumnDefinition Width="3*" />
+                                <ColumnDefinition Width="2*" />
+                                <ColumnDefinition Width="72" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="{x:Bind Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                            <CheckBox Grid.Column="1" MinWidth="0" IsChecked="{x:Bind Kill, Mode=OneWay}" IsEnabled="{x:Bind CanStop}"
-                                      Click="Kill_Click" ToolTipService.ToolTip="{x:Bind KillTooltip}" />
-                            <CheckBox Grid.Column="2" MinWidth="0" IsChecked="{x:Bind Restart, Mode=OneWay}"
-                                      Click="Restart_Click" ToolTipService.ToolTip="Start this app; Restart Selected acts on it." />
+                            <Button Click="Favorite_Click" Padding="6" Background="Transparent" BorderThickness="0"
+                                    ToolTipService.ToolTip="Favorite: on the start page and in the tray menu, where it starts the app or brings it to the front. Click to change."
+                                    AutomationProperties.Name="Favorite">
+                                <FontIcon Glyph="{x:Bind FavoriteGlyph}" Foreground="{x:Bind FavoriteBrush}" FontSize="14" />
+                            </Button>
+                            <TextBlock Grid.Column="1" Text="{x:Bind Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Grid.Column="2" Text="{x:Bind Commandline}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" ToolTipService.ToolTip="{x:Bind Commandline}" />
+                            <TextBlock Grid.Column="3" Text="{x:Bind StopMethod}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock Grid.Column="4" Text="{x:Bind Status}" VerticalAlignment="Center"
+                                       Foreground="{ThemeResource SystemFillColorSuccessBrush}" />
                         </Grid>
                     </DataTemplate>
                 </ListView.ItemTemplate>

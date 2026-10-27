@@ -37,6 +37,10 @@ public sealed class Activity
 {
     public required string Name { get; set; }
 
+    /// <summary>Shown on the start page and in the tray menu.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Favorite { get; set; }
+
     /// <summary>Never null: <c>"Apps": null</c> in the file reads as an empty list.</summary>
     public List<ActivityApp> Apps
     {
@@ -50,6 +54,19 @@ public sealed class Activity
         get;
         set => field = value ?? [];
     } = [];
+
+    /// <summary>The RDP sessions to connect to. Never null: <c>"RdpSessions": null</c> reads as an empty list.</summary>
+    public List<ActivityRdpSession> RdpSessions
+    {
+        get;
+        set => field = value ?? [];
+    } = [];
+}
+
+public sealed class ActivityRdpSession
+{
+    /// <summary>The <see cref="RdpSession.Name"/> of the session, matched case-insensitively.</summary>
+    public required string Name { get; set; }
 }
 
 public sealed class ActivityApp

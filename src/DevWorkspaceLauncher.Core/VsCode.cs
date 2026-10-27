@@ -64,6 +64,25 @@ public static class VsCodeUri
         return (kind, name, location);
     }
 
+    /// <summary>
+    /// The name with the remote host after it - "develop (cce-dev03)" - so a local and a remote
+    /// workspace of the same name can be told apart. Local workspaces, and names that already
+    /// mention the host, are left as they are.
+    /// </summary>
+    public static string Title(string name, string uri)
+    {
+        var (scheme, authority, _) = Split(uri);
+        if (scheme.Length == 0 || string.Equals(scheme, "file", StringComparison.OrdinalIgnoreCase))
+        {
+            return name;
+        }
+
+        var label = RemoteLabel(authority);
+        var colon = label.IndexOf(": ", StringComparison.Ordinal);
+        var host = colon < 0 ? label : label[(colon + 2)..];
+        return name.Contains(host, StringComparison.OrdinalIgnoreCase) ? name : $"{name} ({host})";
+    }
+
     private static (string Scheme, string Authority, string Path) Split(string uri)
     {
         var mark = uri.IndexOf("://", StringComparison.Ordinal);
@@ -380,6 +399,9 @@ public sealed class WorkspaceRow
     /// <summary>The favourite's window title pattern, when it has one. See <see cref="WorkspaceFavorite.WindowTitle"/>.</summary>
     public string? WindowTitle { get; init; }
 
+    /// <summary>When VS Code last opened it; null for a favourite VS Code has no storage directory for.</summary>
+    public DateTime? LastUsed { get; init; }
+
     /// <summary>Filled in per refresh by probing the workspace's state database.</summary>
     public bool IsOpen { get; set; }
 
@@ -511,6 +533,7 @@ public static class WorkspaceRows
                 Kind = workspace.Kind,
                 Name = Named(favorite, workspace.DisplayName),
                 Location = workspace.Location,
+                LastUsed = workspace.LastUsed,
                 Preferred = favorite is not null,
                 WindowTitle = favorite?.WindowTitle
             });
@@ -530,6 +553,7 @@ public static class WorkspaceRows
                 Kind = known.Kind,
                 Name = Named(favorite, known.DisplayName),
                 Location = known.Location,
+                LastUsed = known.LastUsed,
                 Preferred = true,
                 WindowTitle = favorite.WindowTitle
             };

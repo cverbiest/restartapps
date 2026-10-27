@@ -50,6 +50,7 @@ public static class CommandLineParser
 public static class WindowFinder
 {
     private const uint WM_CLOSE = 0x0010;
+    private const int SW_RESTORE = 9;
 
     private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 
@@ -67,6 +68,15 @@ public static class WindowFinder
 
     [DllImport("user32.dll")]
     private static extern int GetWindowThreadProcessId(IntPtr hWnd, out int processId);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsIconic(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern bool ShowWindow(IntPtr hWnd, int command);
+
+    [DllImport("user32.dll")]
+    private static extern bool SetForegroundWindow(IntPtr hWnd);
 
     [DllImport("user32.dll")]
     private static extern bool PostMessage(IntPtr hWnd, uint message, IntPtr wParam, IntPtr lParam);
@@ -185,6 +195,17 @@ public static class WindowFinder
     public static void Close(IntPtr hWnd) => PostMessage(hWnd, WM_CLOSE, IntPtr.Zero, IntPtr.Zero);
 
     public static bool StillOpen(IntPtr hWnd) => IsWindow(hWnd) && IsWindowVisible(hWnd);
+
+    /// <summary>Brings the window to the front, restoring it when minimised.</summary>
+    public static void BringToFront(IntPtr hWnd)
+    {
+        if (IsIconic(hWnd))
+        {
+            ShowWindow(hWnd, SW_RESTORE);
+        }
+
+        SetForegroundWindow(hWnd);
+    }
 
     private static Regex BuildMatcher(string pattern)
     {

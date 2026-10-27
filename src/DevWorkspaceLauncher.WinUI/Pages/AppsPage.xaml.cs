@@ -1,27 +1,35 @@
-using System.Collections.ObjectModel;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Navigation;
 
 namespace DevWorkspaceLauncher.WinUI.Pages;
 
-/// <summary>The configured apps with their Kill/Restart ticks, the restart buttons and app profiles.</summary>
+/// <summary>
+/// The app definitions: add, edit, delete (or drop files on the window), start, stop and restart the
+/// selected ones, pin, add to an activity.
+/// </summary>
 public sealed partial class AppsPage : Page
 {
-    private readonly ObservableCollection<AppItem> _items = [];
+    private readonly ColumnSort<AppItem> _sort;
 
     private static AppState State => App.State;
 
     public AppsPage()
     {
         InitializeComponent();
-        List.ItemsSource = _items;
+        ItemActions.AttachActivityMenu(ActivityMenu, () => XamlRoot, () => Selected().Cast<object>().ToList());
+        _sort = new ColumnSort<AppItem>(Refresh,
+            (FavHeader, item => item.App.Favorite ? 0 : 1),
+            (NameHeader, item => item.Name),
+            (CommandHeader, item => item.Commandline),
+            (StopHeader, item => item.StopMethod),
+            (StatusHeader, item => item.Running ? 0 : item.App.Disabled ? 2 : 1));
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         State.ConfigurationChanged += State_Changed;
-        State.AppsChanged += State_Changed;
         State.BusyChanged += State_BusyChanged;
         Refresh();
         State_BusyChanged(null, EventArgs.Empty);
@@ -30,7 +38,6 @@ public sealed partial class AppsPage : Page
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
         State.ConfigurationChanged -= State_Changed;
-        State.AppsChanged -= State_Changed;
         State.BusyChanged -= State_BusyChanged;
     }
 
@@ -38,161 +45,166 @@ public sealed partial class AppsPage : Page
 
     private void State_BusyChanged(object? sender, EventArgs e)
     {
-        KillAndStart.IsEnabled = !State.Busy;
-        RestartSelected.IsEnabled = !State.Busy;
+        StartButton.IsEnabled = StopButton.IsEnabled = RestartButton.IsEnabled = !State.Busy;
     }
+
+    private void Search_TextChanged(object sender, TextChangedEventArgs e) => Refresh();
+
+    private void Refresh_Click(object sender, RoutedEventArgs e) => Refresh();
 
     private void Refresh()
     {
-        _items.Clear();
-        foreach (var app in State.VisibleApps)
+        // Saving (a pin, an edit) refreshes the list; keep the selection across it.
+        var selected = Selected().ToHashSet();
+        var items = _sort.Apply(State.Config.Apps
+            .Where(app => ItemActions.Matches(Search.Text, app.Name, app.Commandline))
+            .Select(app => new AppItem(app, !app.Disabled && AppController.IsRunning(app))))
+            .ToList();
+        List.ItemsSource = items;
+        foreach (var item in items.Where(item => selected.Contains(item.App)))
         {
-            _items.Add(new AppItem(app));
+            List.SelectedItems.Add(item);
         }
-
-        BuildProfileMenu();
     }
 
-    private void Kill_Click(object sender, RoutedEventArgs e)
+    /// <summary>The selected apps; <paramref name="enabledOnly"/> leaves out the disabled ones, for the actions that run them.</summary>
+    private List<AppConfiguration> Selected(bool enabledOnly = false) =>
+        List.SelectedItems.OfType<AppItem>().Select(item => item.App).Where(app => !enabledOnly || !app.Disabled).ToList();
+
+    private async Task RunOnSelectedAsync(Func<IReadOnlyList<AppConfiguration>, Task> run)
     {
-        if (sender is CheckBox { DataContext: AppItem item } box)
+        var selected = Selected(enabledOnly: true);
+        if (selected.Count == 0)
         {
-            item.Kill = box.IsChecked == true;
+            State.LogMessage("No (enabled) app selected.");
+            return;
         }
+
+        await run(selected);
+        Refresh();
     }
 
-    private void Restart_Click(object sender, RoutedEventArgs e)
+    private async void Start_Click(object sender, RoutedEventArgs e) => await RunOnSelectedAsync(State.StartAppsAsync);
+
+    private async void Stop_Click(object sender, RoutedEventArgs e) => await RunOnSelectedAsync(State.StopAppsAsync);
+
+    private async void Restart_Click(object sender, RoutedEventArgs e) => await RunOnSelectedAsync(State.RestartAppsAsync);
+
+    private void List_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
     {
-        if (sender is CheckBox { DataContext: AppItem item } box)
+        if ((e.OriginalSource as FrameworkElement)?.DataContext is AppItem { App.Disabled: false } item
+            && !LaunchItemsPage.IsInButton(e.OriginalSource as DependencyObject))
         {
-            item.Restart = box.IsChecked == true;
+            State.StartOrFocusApp(item.App);
         }
     }
 
-    private async void KillAndStart_Click(object sender, RoutedEventArgs e) =>
-        await State.RunBusyAsync(() => AppController.KillAndStartAsync(State.VisibleApps, stopOnlySelected: false, State.LogMessage));
+    private void Favorite_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: AppItem item })
+        {
+            item.App.Favorite = !item.App.Favorite;
+            State.Save();
+        }
+    }
 
-    private async void RestartSelected_Click(object sender, RoutedEventArgs e) =>
-        await State.RunBusyAsync(() => AppController.KillAndStartAsync(State.VisibleApps, stopOnlySelected: true, State.LogMessage));
+    private async void Add_Click(object sender, RoutedEventArgs e)
+    {
+        var app = new AppConfiguration { Name = string.Empty, Commandline = string.Empty };
+        if (await EditAsync(app, "Add app"))
+        {
+            State.Config.Apps.Add(app);
+            State.Save();
+            State.LogMessage($"Added app '{app.Name}'.");
+        }
+    }
+
+    private async void Edit_Click(object sender, RoutedEventArgs e)
+    {
+        if (Selected() is not [var app])
+        {
+            State.LogMessage("Select one app to edit.");
+            return;
+        }
+
+        var oldName = app.Name;
+        if (await EditAsync(app, "Edit app"))
+        {
+            if (!string.Equals(oldName, app.Name, StringComparison.Ordinal))
+            {
+                ActivityOperations.RenameApp(State.Config, oldName, app.Name);
+            }
+
+            State.Save();
+            State.LogMessage($"Updated app '{app.Name}'.");
+        }
+    }
+
+    private async void Delete_Click(object sender, RoutedEventArgs e) =>
+        await ItemActions.DeleteAsync(XamlRoot, Selected().Cast<object>().ToList());
 
     private void EditConfig_Click(object sender, RoutedEventArgs e) =>
         ConfigFileOpener.Open(State.ConfigPath, State.LogMessage);
 
-    // --------------------------------------------------------------- profiles
-
-    private Profile? SelectedProfile() => ProfileOperations.Find(State.Config.Profiles, State.SelectedProfileName);
-
-    private void BuildProfileMenu()
+    /// <summary>Shows the app's fields in a dialog and writes them back on OK.</summary>
+    private async Task<bool> EditAsync(AppConfiguration app, string title)
     {
-        if (SelectedProfile() is null)
+        var name = new TextBox { Header = "Name", Text = app.Name };
+        var commandline = new TextBox { Header = "Command line (%VARIABLES% allowed)", Text = app.Commandline };
+        var stopMethod = new ComboBox
         {
-            State.SelectedProfileName = State.Config.Profiles.FirstOrDefault()?.Name;
+            Header = "Stop by",
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            ItemsSource = Enum.GetNames<StopMethod>(),
+            SelectedItem = app.StopMethod.ToString()
+        };
+        var aumid = new TextBox
+        {
+            Header = "Window AppUserModelID (for Stop by Window; * and ? allowed)",
+            Text = app.WindowAumid ?? string.Empty
+        };
+        var disabled = new CheckBox { Content = "Disabled (kept in the file, ignored everywhere)", IsChecked = app.Disabled };
+        var error = new TextBlock { Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["SystemFillColorCriticalBrush"] };
+
+        var dialog = new ContentDialog
+        {
+            XamlRoot = XamlRoot,
+            Title = title,
+            Content = new StackPanel { Spacing = 8, MinWidth = 440, Children = { name, commandline, stopMethod, aumid, disabled, error } },
+            PrimaryButtonText = "OK",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Primary
+        };
+
+        dialog.PrimaryButtonClick += (_, args) =>
+        {
+            var newName = name.Text.Trim();
+            var duplicate = State.Config.Apps.Any(other => !ReferenceEquals(other, app)
+                && string.Equals(other.Name, newName, StringComparison.OrdinalIgnoreCase));
+            error.Text = newName.Length == 0 ? "Give the app a name."
+                : duplicate ? $"There is already an app named '{newName}'."
+                : commandline.Text.Trim().Length == 0 ? "Give the command line that starts it."
+                : (string)stopMethod.SelectedItem == nameof(StopMethod.Window) && aumid.Text.Trim().Length == 0
+                    ? "Stop by Window needs the window AppUserModelID."
+                : string.Empty;
+            args.Cancel = error.Text.Length > 0;
+        };
+
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary)
+        {
+            return false;
         }
 
-        ProfileButton.Content = State.SelectedProfileName is null ? "Profile" : $"Profile: {State.SelectedProfileName}";
-        ProfileMenu.Items.Clear();
-
-        foreach (var profile in State.Config.Profiles)
+        app.Name = name.Text.Trim();
+        app.Commandline = commandline.Text.Trim();
+        app.StopMethod = Enum.Parse<StopMethod>((string)stopMethod.SelectedItem);
+        app.WindowAumid = string.IsNullOrWhiteSpace(aumid.Text) ? null : aumid.Text.Trim();
+        app.Disabled = disabled.IsChecked == true;
+        if (!app.CanStop)
         {
-            var choice = new RadioMenuFlyoutItem
-            {
-                Text = profile.Name,
-                GroupName = "Profile",
-                IsChecked = string.Equals(profile.Name, State.SelectedProfileName, StringComparison.OrdinalIgnoreCase)
-            };
-            choice.Click += (_, _) =>
-            {
-                State.SelectedProfileName = profile.Name;
-                BuildProfileMenu();
-            };
-            ProfileMenu.Items.Add(choice);
+            app.Kill = false;
         }
 
-        if (State.Config.Profiles.Count > 0)
-        {
-            ProfileMenu.Items.Add(new MenuFlyoutSeparator());
-        }
-
-        ProfileMenu.Items.Add(Command("Load", "Apply this profile's ticks to the list.", LoadProfile));
-        ProfileMenu.Items.Add(Command("Save As…", "Store the current ticks as a new profile.", SaveProfileAs));
-        ProfileMenu.Items.Add(Command("Update", "Overwrite the selected profile with the current ticks.", UpdateProfile));
-        ProfileMenu.Items.Add(Command("Delete", "Remove the selected profile.", DeleteProfile));
-    }
-
-    private static MenuFlyoutItem Command(string text, string tooltip, Action onClick)
-    {
-        var item = new MenuFlyoutItem { Text = text };
-        ToolTipService.SetToolTip(item, tooltip);
-        item.Click += (_, _) => onClick();
-        return item;
-    }
-
-    private void LoadProfile()
-    {
-        var profile = SelectedProfile();
-        if (profile is null)
-        {
-            State.LogMessage("No profile selected.");
-            return;
-        }
-
-        State.ApplyProfile(profile);
-    }
-
-    private async void SaveProfileAs()
-    {
-        var name = await Dialogs.PromptAsync(XamlRoot, "Save profile as", "Profile name:", State.SelectedProfileName ?? string.Empty);
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            return;
-        }
-
-        name = name.Trim();
-        var existing = ProfileOperations.Find(State.Config.Profiles, name);
-        if (existing is not null
-            && !await Dialogs.ConfirmAsync(XamlRoot, "Save profile as", $"Profile '{existing.Name}' already exists. Overwrite it?"))
-        {
-            return;
-        }
-
-        var profile = ProfileOperations.Upsert(State.Config.Profiles, name, ProfileOperations.Capture(State.VisibleApps));
-        State.LogMessage(existing is null ? $"Created profile '{name}'." : $"Overwrote profile '{profile.Name}'.");
-
-        State.SelectedProfileName = profile.Name;
-        State.Save();
-    }
-
-    private void UpdateProfile()
-    {
-        var profile = SelectedProfile();
-        if (profile is null)
-        {
-            State.LogMessage("No profile selected.");
-            return;
-        }
-
-        profile.Entries = ProfileOperations.Capture(State.VisibleApps);
-        State.Save();
-        State.LogMessage($"Updated profile '{profile.Name}'.");
-    }
-
-    private async void DeleteProfile()
-    {
-        var profile = SelectedProfile();
-        if (profile is null)
-        {
-            State.LogMessage("No profile selected.");
-            return;
-        }
-
-        if (!await Dialogs.ConfirmAsync(XamlRoot, "Delete profile", $"Delete profile '{profile.Name}'?"))
-        {
-            return;
-        }
-
-        State.Config.Profiles.Remove(profile);
-        State.SelectedProfileName = null;
-        State.Save();
-        State.LogMessage($"Deleted profile '{profile.Name}'.");
+        return true;
     }
 }

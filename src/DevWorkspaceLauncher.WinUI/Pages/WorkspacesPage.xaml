@@ -12,41 +12,56 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <TextBlock Text="Workspaces" Style="{StaticResource TitleTextBlockStyle}" />
+        <StackPanel>
+            <TextBlock Text="VS Code workspaces" Style="{StaticResource TitleTextBlockStyle}" />
+            <TextBlock
+                Text="Double-click a workspace to open it, or to bring its window to the front when it is open. The star keeps a workspace on the preferred list; Show all recent lists everything VS Code has opened. Click a column header to sort."
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                TextWrapping="Wrap" />
+        </StackPanel>
 
         <Grid Grid.Row="1" ColumnSpacing="8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <StackPanel Orientation="Horizontal" Spacing="8">
                 <Button Click="OpenSelected_Click" Style="{StaticResource AccentButtonStyle}"
-                        ToolTipService.ToolTip="Open every workspace ticked Open.">
+                        ToolTipService.ToolTip="Open the selected workspaces.">
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <FontIcon Glyph="&#xE8E5;" FontSize="14" />
-                        <TextBlock Text="Open Selected" />
+                        <TextBlock Text="Open" />
                     </StackPanel>
                 </Button>
                 <Button Click="CloseSelected_Click"
-                        ToolTipService.ToolTip="Ask the windows ticked Close to close. Never forced, so unsaved work still prompts.">
+                        ToolTipService.ToolTip="Ask the windows of the selected workspaces to close. Never forced, so unsaved work still prompts.">
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <FontIcon Glyph="&#xE711;" FontSize="14" />
-                        <TextBlock Text="Close Selected" />
+                        <TextBlock Text="Close" />
                     </StackPanel>
                 </Button>
+                <Button Click="Delete_Click" ToolTipService.ToolTip="Remove the selected workspaces from the preferred list.">
+                    <FontIcon Glyph="&#xE74D;" FontSize="14" />
+                </Button>
+                <DropDownButton ToolTipService.ToolTip="Add the selected workspaces to an activity (as Open).">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE8F4;" FontSize="14" />
+                        <TextBlock Text="Add to activity" />
+                    </StackPanel>
+                    <DropDownButton.Flyout>
+                        <MenuFlyout x:Name="ActivityMenu" Placement="Bottom" />
+                    </DropDownButton.Flyout>
+                </DropDownButton>
                 <Button Click="Refresh_Click" ToolTipService.ToolTip="Re-read the workspace list and check which ones are open.">
                     <FontIcon Glyph="&#xE72C;" FontSize="14" />
                 </Button>
                 <ToggleButton x:Name="ShowAll" Content="Show all recent" Click="ShowAll_Click" />
-                <DropDownButton x:Name="SessionButton" Content="Session">
-                    <DropDownButton.Flyout>
-                        <MenuFlyout x:Name="SessionMenu" Placement="Bottom" />
-                    </DropDownButton.Flyout>
-                </DropDownButton>
             </StackPanel>
             <TextBlock x:Name="Count" Grid.Column="2" VerticalAlignment="Center"
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            <TextBox x:Name="Search" Grid.Column="3" Width="240" PlaceholderText="Search" TextChanged="Search_TextChanged" />
         </Grid>
 
         <Grid Grid.Row="2"
@@ -59,26 +74,34 @@
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-            <!-- The header row and the item template use the same column widths, so the columns line up. -->
-            <Grid Padding="12,8" ColumnSpacing="8">
+            <!-- The header row and the item template use the same column widths, so the columns line up.
+                 Clicking a header sorts by its column (ColumnSort). -->
+            <Grid Padding="12,4" ColumnSpacing="8">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="44" />
+                    <ColumnDefinition Width="2*" />
+                    <ColumnDefinition Width="3*" />
+                    <ColumnDefinition Width="128" />
                     <ColumnDefinition Width="56" />
-                    <ColumnDefinition Width="56" />
-                    <ColumnDefinition Width="200" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="56" />
-                    <ColumnDefinition Width="88" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="Pref" Style="{StaticResource CaptionTextBlockStyle}" />
-                <TextBlock Grid.Column="1" Text="Close" Style="{StaticResource CaptionTextBlockStyle}" />
-                <TextBlock Grid.Column="2" Text="Open" Style="{StaticResource CaptionTextBlockStyle}" />
-                <TextBlock Grid.Column="3" Text="Workspace" Style="{StaticResource CaptionTextBlockStyle}" />
-                <TextBlock Grid.Column="4" Text="Location" Style="{StaticResource CaptionTextBlockStyle}" />
-                <TextBlock Grid.Column="5" Text="Status" Style="{StaticResource CaptionTextBlockStyle}" />
+                <Button x:Name="PrefHeader" Style="{StaticResource SortHeader}">
+                    <TextBlock Text="Pref" Style="{StaticResource CaptionTextBlockStyle}" />
+                </Button>
+                <Button x:Name="NameHeader" Grid.Column="1" Style="{StaticResource SortHeader}">
+                    <TextBlock Text="Workspace" Style="{StaticResource CaptionTextBlockStyle}" />
+                </Button>
+                <Button x:Name="LocationHeader" Grid.Column="2" Style="{StaticResource SortHeader}">
+                    <TextBlock Text="Location" Style="{StaticResource CaptionTextBlockStyle}" />
+                </Button>
+                <Button x:Name="LastUsedHeader" Grid.Column="3" Style="{StaticResource SortHeader}">
+                    <TextBlock Text="Last used" Style="{StaticResource CaptionTextBlockStyle}" />
+                </Button>
+                <Button x:Name="StatusHeader" Grid.Column="4" Style="{StaticResource SortHeader}">
+                    <TextBlock Text="Status" Style="{StaticResource CaptionTextBlockStyle}" />
+                </Button>
             </Grid>
 
-            <ListView x:Name="List" Grid.Row="1" SelectionMode="None">
+            <ListView x:Name="List" Grid.Row="1" SelectionMode="Extended" IsDoubleTapEnabled="True" DoubleTapped="List_DoubleTapped">
                 <ListView.ItemContainerStyle>
                     <Style TargetType="ListViewItem">
                         <Setter Property="Padding" Value="12,0" />
@@ -90,27 +113,22 @@
                         <Grid ColumnSpacing="8" MinHeight="40">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="44" />
+                                <ColumnDefinition Width="2*" />
+                                <ColumnDefinition Width="3*" />
+                                <ColumnDefinition Width="128" />
                                 <ColumnDefinition Width="56" />
-                                <ColumnDefinition Width="56" />
-                                <ColumnDefinition Width="200" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="56" />
-                                <ColumnDefinition Width="88" />
                             </Grid.ColumnDefinitions>
                             <Button Click="Preferred_Click" Padding="6" Background="Transparent" BorderThickness="0"
                                     ToolTipService.ToolTip="{x:Bind PreferredTooltip}" AutomationProperties.Name="{x:Bind PreferredTooltip}">
-                                <FontIcon Glyph="{x:Bind PreferredGlyph}" FontSize="14" />
+                                <FontIcon Glyph="{x:Bind PreferredGlyph}" Foreground="{x:Bind PreferredBrush}" FontSize="14" />
                             </Button>
-                            <CheckBox Grid.Column="1" MinWidth="0" IsChecked="{x:Bind Close, Mode=OneWay}" IsEnabled="{x:Bind IsOpen}"
-                                      Click="Close_Click" ToolTipService.ToolTip="Include this window in Close Selected." />
-                            <CheckBox Grid.Column="2" MinWidth="0" IsChecked="{x:Bind Open, Mode=OneWay}"
-                                      Click="Open_Click" ToolTipService.ToolTip="Include this workspace in Open Selected, and in a saved session." />
-                            <TextBlock Grid.Column="3" Text="{x:Bind Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                            <TextBlock Grid.Column="4" Text="{x:Bind Location}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                            <TextBlock Grid.Column="1" Text="{x:Bind Title}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Grid.Column="2" Text="{x:Bind Location}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" ToolTipService.ToolTip="{x:Bind Uri}" />
-                            <TextBlock Grid.Column="5" Text="{x:Bind Status}" VerticalAlignment="Center"
+                            <TextBlock Grid.Column="3" Text="{x:Bind LastUsedText}" VerticalAlignment="Center"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock Grid.Column="4" Text="{x:Bind Status}" VerticalAlignment="Center"
                                        Foreground="{ThemeResource SystemFillColorSuccessBrush}" />
-                            <Button Grid.Column="6" Content="{x:Bind ActionText}" Click="Action_Click" HorizontalAlignment="Stretch" />
                         </Grid>
                     </DataTemplate>
                 </ListView.ItemTemplate>

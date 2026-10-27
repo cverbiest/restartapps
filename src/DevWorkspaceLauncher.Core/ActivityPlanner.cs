@@ -6,16 +6,21 @@ public enum ActivityStepKind
     CloseWorkspace,
     Wait,
     StartApp,
-    OpenWorkspace
+    OpenWorkspace,
+    ConnectRdp
 }
 
-/// <summary>One thing a run does. <see cref="App"/> is set for app steps, <see cref="Uri"/> for workspace steps.</summary>
+/// <summary>
+/// One thing a run does. <see cref="App"/> is set for app steps, <see cref="Uri"/> for workspace steps,
+/// <see cref="RdpSession"/> for RDP steps.
+/// </summary>
 public sealed record ActivityStep(
     ActivityStepKind Kind,
     string Name,
     AppConfiguration? App = null,
     string? Uri = null,
-    string? WindowTitle = null);
+    string? WindowTitle = null,
+    RdpSession? RdpSession = null);
 
 /// <summary>The steps of a run, in order, and the lines to log about items that were skipped.</summary>
 public sealed record ActivityPlan(IReadOnlyList<ActivityStep> Steps, IReadOnlyList<string> Notes);
@@ -23,8 +28,9 @@ public sealed record ActivityPlan(IReadOnlyList<ActivityStep> Steps, IReadOnlyLi
 /// <summary>
 /// Decides what running an activity does, without doing any of it, so the rules can be tested.
 /// <para>
-/// Order: every stop and close first, a pause if anything was stopped, then every start and open, each
-/// group in the order the activity lists them - the same shape as Kill &amp;&amp; Start.
+/// Order: every stop and close first, a pause if anything was stopped, then every start and open, then
+/// the RDP connections, each group in the order the activity lists them - the same shape as Kill &amp;&amp;
+/// Start.
 /// </para>
 /// </summary>
 public static class ActivityPlanner
@@ -35,6 +41,7 @@ public static class ActivityPlanner
         var closes = new List<ActivityStep>();
         var starts = new List<ActivityStep>();
         var opens = new List<ActivityStep>();
+        var connects = new List<ActivityStep>();
         var notes = new List<string>();
 
         foreach (var item in activity.Apps)
@@ -102,6 +109,19 @@ public static class ActivityPlanner
             }
         }
 
+        foreach (var item in activity.RdpSessions)
+        {
+            var session = config.RdpSessions.FirstOrDefault(candidate =>
+                string.Equals(candidate.Name, item.Name, StringComparison.OrdinalIgnoreCase));
+            if (session is null)
+            {
+                notes.Add($"No RDP session named '{item.Name}'; skipped.");
+                continue;
+            }
+
+            connects.Add(new ActivityStep(ActivityStepKind.ConnectRdp, session.Name, RdpSession: session));
+        }
+
         var steps = new List<ActivityStep>();
         steps.AddRange(stops);
         steps.AddRange(closes);
@@ -112,6 +132,7 @@ public static class ActivityPlanner
 
         steps.AddRange(starts);
         steps.AddRange(opens);
+        steps.AddRange(connects);
 
         if (steps.Count == 0)
         {

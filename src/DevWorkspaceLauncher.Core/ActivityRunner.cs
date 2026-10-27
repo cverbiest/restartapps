@@ -15,7 +15,7 @@ public static class ActivityRunner
                 log(note);
             }
 
-            foreach (var step in plan.Steps.Where(step => step.Kind != ActivityStepKind.OpenWorkspace))
+            foreach (var step in plan.Steps.Where(step => step.Kind is not (ActivityStepKind.OpenWorkspace or ActivityStepKind.ConnectRdp)))
             {
                 switch (step.Kind)
                 {
@@ -37,7 +37,7 @@ public static class ActivityRunner
                 }
             }
 
-            // Opens come last in a plan, and go together so VS Code gets its pause between windows.
+            // Opens come after the app steps, and go together so VS Code gets its pause between windows.
             var opens = plan.Steps
                 .Where(step => step.Kind == ActivityStepKind.OpenWorkspace)
                 .Select(step => (step.Uri!, step.Name))
@@ -45,6 +45,19 @@ public static class ActivityRunner
             if (opens.Count > 0)
             {
                 await WorkspaceController.OpenAsync(opens, config.VsCodeExecutable, log);
+            }
+
+            // The connection's clean-up (temporary .rdp file and credential) runs on after the activity.
+            foreach (var step in plan.Steps.Where(step => step.Kind == ActivityStepKind.ConnectRdp))
+            {
+                try
+                {
+                    RdpLauncher.Launch(RdpResolver.Resolve(config, step.RdpSession), step.Name, log);
+                }
+                catch (Exception ex)
+                {
+                    log($"Could not connect to '{step.Name}': {ex.Message}");
+                }
             }
 
             log($"Activity '{activity.Name}' complete.");

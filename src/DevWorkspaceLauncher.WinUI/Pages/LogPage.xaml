@@ -8,7 +8,14 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <TextBlock Text="Activity log" Style="{StaticResource TitleTextBlockStyle}" Margin="0,0,0,12" />
+        <Grid Margin="0,0,0,12" ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="Activity log" Style="{StaticResource TitleTextBlockStyle}" />
+            <TextBox x:Name="Search" Grid.Column="1" Width="240" PlaceholderText="Search" TextChanged="Search_TextChanged" />
+        </Grid>
         <ListView
             x:Name="Lines"
             Grid.Row="1"

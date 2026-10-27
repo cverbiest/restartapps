@@ -8,7 +8,7 @@ metadata:
   modified: 2026-10-26T06:37:23.697Z
 ---
 
-docs/superpowers/plans/todo.md is the user's own todo list for the launcher (tracked in git since 2026-10-26). Update it as work progresses: mark items done, note partial progress, and keep a Done section. The user adds and removes items there themselves, so never drop or reword their items.
+docs/superpowers/plans/todo.md is the user's own todo list for the launcher (tracked in git since 2026-10-26). Update it as work progresses: mark items done by adding **done** to the item itself (no separate Done section; the user asked for that on 2026-10-27), and note partial progress. The user adds and removes items there themselves, so never drop or reword their items.
 
 **Why:** the user asked for it, to see progress at a glance.
 
