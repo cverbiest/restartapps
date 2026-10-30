@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh -NoProfile -File \"$CLAUDE_PROJECT_DIR/.claude/hooks/scan-staged.ps1\"",
+            "timeout": 120,
+            "statusMessage": "Scanning what would be committed for secrets..."
+          }
+        ]
+      }
+    ]
+  }
+}
