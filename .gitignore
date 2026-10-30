@@ -63,5 +63,6 @@ desktop.ini
 .superpowers/
 Favorites Remote Desktop Plus.xml
 
-# Remote Desktop Plus favorites, decrypted for import
+# Remote Desktop Plus favorites, decrypted for import, and the local script that decrypts them
 rdpplus.favorites.txt
+tools/Export-RdpPlusFavorites.ps1
