@@ -43,6 +43,44 @@ public static class CredentialStore
     [DllImport("advapi32.dll")]
     private static extern void CredFree(IntPtr buffer);
 
+    [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true, EntryPoint = "CredEnumerateW")]
+    private static extern bool CredEnumerate(string? filter, int flags, out int count, out IntPtr credentials);
+
+    /// <summary>The name prefix of the generic credentials the RDP session editor offers.</summary>
+    public const string SessionCredentialPrefix = "DevLauncher_";
+
+    /// <summary>
+    /// The generic credentials whose name starts with <paramref name="prefix"/>, with their usernames,
+    /// sorted by name. Passwords are not read.
+    /// </summary>
+    public static IReadOnlyList<(string Name, string? UserName)> ListGeneric(string prefix)
+    {
+        if (!CredEnumerate(prefix + "*", 0, out var count, out var array))
+        {
+            var error = Marshal.GetLastWin32Error();
+            return error == ERROR_NOT_FOUND ? [] : throw new System.ComponentModel.Win32Exception(error);
+        }
+
+        try
+        {
+            var found = new List<(string Name, string? UserName)>();
+            for (var i = 0; i < count; i++)
+            {
+                var credential = Marshal.PtrToStructure<Credential>(Marshal.ReadIntPtr(array, i * IntPtr.Size));
+                if (credential.Type == CRED_TYPE_GENERIC)
+                {
+                    found.Add((credential.TargetName, credential.UserName));
+                }
+            }
+
+            return found.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ToList();
+        }
+        finally
+        {
+            CredFree(array);
+        }
+    }
+
     /// <summary>The generic credential named <paramref name="target"/>, or null when there is none.</summary>
     public static StoredCredential? ReadGeneric(string target)
     {

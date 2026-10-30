@@ -115,6 +115,31 @@ public static class AppController
         }
     }
 
+    /// <summary>
+    /// The one-click app: brings its window to the front when it is running, starts it otherwise.
+    /// Never stops anything.
+    /// </summary>
+    public static void StartOrFocus(AppConfiguration app, Action<string> log)
+    {
+        if (!IsRunning(app))
+        {
+            Start(app, log);
+            return;
+        }
+
+        var windows = app.StopMethod == StopMethod.Window && !string.IsNullOrWhiteSpace(app.WindowAumid)
+            ? WindowFinder.FindByAumid(app.WindowAumid)
+            : WindowFinder.FindByProcessName(CommandLineParser.GetProcessName(app.ExpandedCommandline));
+        if (windows.Count == 0)
+        {
+            log($"{app.Name} is running but has no window to bring to the front.");
+            return;
+        }
+
+        log($"Bringing {app.Name} to the front.");
+        WindowFinder.BringToFront(windows[0].Handle);
+    }
+
     public static void Start(AppConfiguration app, Action<string> log)
     {
         log($"Starting {app.Name}...");

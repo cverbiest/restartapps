@@ -44,7 +44,7 @@ public abstract class CaseInsensitiveEnumConverter<TEnum>(string propertyName) :
 
 public sealed class StopMethodConverter() : CaseInsensitiveEnumConverter<StopMethod>("StopMethod");
 
-public sealed class AppConfiguration
+public sealed class AppConfiguration : IFavorite
 {
     public required string Name { get; set; }
 
@@ -59,6 +59,14 @@ public sealed class AppConfiguration
 
     /// <summary>Hidden from the grid and ignored by every action, but kept in the file.</summary>
     public bool Disabled { get; set; }
+
+    /// <summary>Shown on the start page and in the tray menu, where it starts the app or brings it to the front.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Favorite { get; set; }
+
+    /// <summary>Its place among the favorites; see <see cref="IFavorite.FavoriteOrder"/>.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int FavoriteOrder { get; set; }
 
     [JsonConverter(typeof(StopMethodConverter))]
     public StopMethod StopMethod { get; set; } = StopMethod.Process;
@@ -82,6 +90,11 @@ public sealed class AppConfiguration
 public sealed class Profile
 {
     public required string Name { get; set; }
+
+    /// <summary>Shown on the start page and in the tray menu.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Favorite { get; set; }
+
     public List<ProfileEntry> Entries { get; set; } = [];
 }
 
@@ -115,6 +128,11 @@ public sealed class WorkspaceProfile
 {
     public required string Name { get; set; }
 
+    /// <summary>Shown on the start page and in the tray menu.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Favorite { get; set; }
+
+
     /// <summary>The URIs to open, in the order they are opened.</summary>
     public List<string> Workspaces { get; set; } = [];
 }
@@ -122,12 +140,17 @@ public sealed class WorkspaceProfile
 public sealed class ConfigurationFile
 {
     public List<AppConfiguration> Apps { get; set; } = [];
+
+    /// <summary>App profiles. The WinUI app converts them into activities (<see cref="ActivityMigration"/>).</summary>
     public List<Profile> Profiles { get; set; } = [];
 
     /// <summary>The preferred VS Code workspaces, in the order they are shown.</summary>
     public List<WorkspaceFavorite> Workspaces { get; set; } = [];
 
-    /// <summary>Named sets of workspaces to open together.</summary>
+    /// <summary>
+    /// Named sets of workspaces to open together. The WinUI app converts them into activities
+    /// (<see cref="ActivityMigration"/>).
+    /// </summary>
     public List<WorkspaceProfile> WorkspaceProfiles { get; set; } = [];
 
     /// <summary>One-click buttons that start and stop a set of linked apps and workspaces.</summary>
@@ -135,6 +158,17 @@ public sealed class ConfigurationFile
 
     /// <summary>Saved RDP connections, in the order they are shown.</summary>
     public List<RdpSession> RdpSessions { get; set; } = [];
+
+    /// <summary>
+    /// The launcher's settings for SSH hosts (pins), by alias. The hosts themselves are in
+    /// <c>~/.ssh/config</c>; see <see cref="SshConfigStore"/>.
+    /// </summary>
+    public List<SshHostSettings> SshHosts { get; set; } = [];
+
+    /// <summary>The terminal SSH hosts open in. Absent means WezTerm when it is installed, else Windows Terminal.</summary>
+    [JsonConverter(typeof(SshClientConverter))]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public SshClient? SshClient { get; set; }
 
     /// <summary>
     /// Window size presets for RDP sessions. One named like a built-in preset replaces it; see

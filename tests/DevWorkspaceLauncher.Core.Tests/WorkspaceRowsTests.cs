@@ -31,6 +31,7 @@ public class WorkspaceRowsTests
         Assert.Equal(["gamma", "alpha"], rows.Select(row => row.Name));
         Assert.All(rows, row => Assert.True(row.Preferred));
         Assert.Equal("g", rows[0].Id);
+        Assert.Equal(Gamma.LastUsed, rows[0].LastUsed);
     }
 
     [Fact]
@@ -45,6 +46,7 @@ public class WorkspaceRowsTests
 
         Assert.Equal("delta", row.Name);
         Assert.Null(row.Id);
+        Assert.Null(row.LastUsed);
         Assert.Equal(WorkspaceKind.WorkspaceFile, row.Kind);
         Assert.Equal(@"c:\code\delta\delta.code-workspace", row.Location);
         Assert.True(row.Preferred);
@@ -69,6 +71,7 @@ public class WorkspaceRowsTests
 
         Assert.Equal(["alpha", "beta (mine)", "gamma"], rows.Select(row => row.Name));
         Assert.Equal([false, true, false], rows.Select(row => row.Preferred));
+        Assert.Equal([Alpha.LastUsed, Beta.LastUsed, Gamma.LastUsed], rows.Select(row => row.LastUsed));
     }
 
     [Fact]

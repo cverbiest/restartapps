@@ -30,12 +30,20 @@ public sealed class AppActionConverter() : CaseInsensitiveEnumConverter<AppActio
 public sealed class WorkspaceActionConverter() : CaseInsensitiveEnumConverter<WorkspaceAction>("Action");
 
 /// <summary>
-/// A named one-click button that acts on a set of linked apps and workspaces. Anything it does not list
-/// is left alone - unlike a profile, which clears every app it does not mention.
+/// A named one-click button that acts on a set of apps, workspaces and RDP sessions. Anything it does
+/// not list is left alone.
 /// </summary>
-public sealed class Activity
+public sealed class Activity : IFavorite
 {
     public required string Name { get; set; }
+
+    /// <summary>Shown on the start page and in the tray menu.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Favorite { get; set; }
+
+    /// <summary>Its place among the favorites; see <see cref="IFavorite.FavoriteOrder"/>.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int FavoriteOrder { get; set; }
 
     /// <summary>Never null: <c>"Apps": null</c> in the file reads as an empty list.</summary>
     public List<ActivityApp> Apps
@@ -50,6 +58,32 @@ public sealed class Activity
         get;
         set => field = value ?? [];
     } = [];
+
+    /// <summary>The RDP sessions to connect to. Never null: <c>"RdpSessions": null</c> reads as an empty list.</summary>
+    public List<ActivityRdpSession> RdpSessions
+    {
+        get;
+        set => field = value ?? [];
+    } = [];
+
+    /// <summary>The SSH hosts to connect to. Never null: <c>"SshHosts": null</c> reads as an empty list.</summary>
+    public List<ActivitySshHost> SshHosts
+    {
+        get;
+        set => field = value ?? [];
+    } = [];
+}
+
+public sealed class ActivitySshHost
+{
+    /// <summary>The alias of the host in <c>~/.ssh/config</c>, matched case-insensitively.</summary>
+    public required string Name { get; set; }
+}
+
+public sealed class ActivityRdpSession
+{
+    /// <summary>The <see cref="RdpSession.Name"/> of the session, matched case-insensitively.</summary>
+    public required string Name { get; set; }
 }
 
 public sealed class ActivityApp

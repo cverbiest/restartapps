@@ -6,12 +6,13 @@ using Microsoft.UI.Xaml.Navigation;
 
 namespace DevWorkspaceLauncher.WinUI.Pages;
 
-/// <summary>The saved RDP sessions: connect, add, edit, delete.</summary>
+/// <summary>The saved RDP sessions: connect, add, edit, delete, pin as favorite.</summary>
 public sealed partial class RdpSessionsPage : Page
 {
     private const string DefaultSize = "(full screen)";
 
     private readonly ObservableCollection<RdpSession> _items = [];
+    private readonly ColumnSort<RdpSession> _sort;
 
     private static AppState State => App.State;
 
@@ -19,6 +20,13 @@ public sealed partial class RdpSessionsPage : Page
     {
         InitializeComponent();
         List.ItemsSource = _items;
+        ItemActions.AttachActivityMenu(ActivityMenu, () => XamlRoot, () => Selected().Cast<object>().ToList());
+        _sort = new ColumnSort<RdpSession>(Refresh,
+            (FavHeader, session => session.Favorite ? 0 : 1),
+            (NameHeader, session => session.Name),
+            (HostHeader, session => session.Host),
+            (SizeHeader, session => session.SizeText),
+            (CredentialHeader, session => session.Credential));
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -34,12 +42,21 @@ public sealed partial class RdpSessionsPage : Page
 
     private void State_Changed(object? sender, EventArgs e) => Refresh();
 
+    private void Search_TextChanged(object sender, TextChangedEventArgs e) => Refresh();
+
     private void Refresh()
     {
+        // Saving (a pin, an edit) refreshes the list; keep the selection across it.
+        var selected = Selected().Select(session => session.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
         _items.Clear();
-        foreach (var session in State.Config.RdpSessions)
+        foreach (var session in _sort.Apply(State.Config.RdpSessions.Where(session =>
+            ItemActions.Matches(Search.Text, session.Name, session.Host, session.Credential))))
         {
             _items.Add(session);
+            if (selected.Contains(session.Name))
+            {
+                List.SelectedItems.Add(session);
+            }
         }
     }
 
@@ -62,9 +79,19 @@ public sealed partial class RdpSessionsPage : Page
 
     private void List_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
     {
-        if ((e.OriginalSource as FrameworkElement)?.DataContext is RdpSession session)
+        if ((e.OriginalSource as FrameworkElement)?.DataContext is RdpSession session
+            && !LaunchItemsPage.IsInButton(e.OriginalSource as DependencyObject))
         {
             State.ConnectRdp(session);
+        }
+    }
+
+    private void Favorite_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: RdpSession session })
+        {
+            FavoriteOrdering.Toggle(session);
+            State.Save();
         }
     }
 
@@ -90,36 +117,21 @@ public sealed partial class RdpSessionsPage : Page
             return;
         }
 
+        var oldName = selected[0].Name;
         if (await EditAsync(selected[0], "Edit RDP session"))
         {
+            if (!string.Equals(oldName, selected[0].Name, StringComparison.Ordinal))
+            {
+                ActivityOperations.RenameRdpSession(State.Config, oldName, selected[0].Name);
+            }
+
             State.Save();
             State.LogMessage($"Updated RDP session '{selected[0].Name}'.");
         }
     }
 
-    private async void Delete_Click(object sender, RoutedEventArgs e)
-    {
-        var selected = Selected();
-        if (selected.Count == 0)
-        {
-            State.LogMessage("No RDP session selected.");
-            return;
-        }
-
-        var names = string.Join(", ", selected.Select(session => $"'{session.Name}'"));
-        if (!await Dialogs.ConfirmAsync(XamlRoot, "Delete RDP sessions", $"Delete {names}?"))
-        {
-            return;
-        }
-
-        foreach (var session in selected)
-        {
-            State.Config.RdpSessions.Remove(session);
-        }
-
-        State.Save();
-        State.LogMessage($"Deleted RDP session(s) {names}.");
-    }
+    private async void Delete_Click(object sender, RoutedEventArgs e) =>
+        await ItemActions.DeleteAsync(XamlRoot, Selected().Cast<object>().ToList());
 
     private void Credentials_Click(object sender, RoutedEventArgs e) => CredentialStore.OpenManager(State.LogMessage);
 
@@ -140,7 +152,7 @@ public sealed partial class RdpSessionsPage : Page
             var entries = RdpPlusImport.ParseListing(await File.ReadAllTextAsync(file.Path));
             if (entries.Count == 0)
             {
-                State.LogMessage($"Could not find any favorites in {file.Path}. Write it with tools\\Export-RdpPlusFavorites.ps1.");
+                State.LogMessage($"Could not find any favorites in {file.Path}. Expected one 'name | secure=False | command line' per line.");
                 return;
             }
 
@@ -181,12 +193,37 @@ public sealed partial class RdpSessionsPage : Page
     {
         var name = new TextBox { Header = "Name", Text = session.Name };
         var host = new TextBox { Header = "Computer (host or host:port)", Text = session.Host ?? string.Empty };
-        var credential = new TextBox
+        // Editable: pick one of the DevLauncher_ credentials, or type any other generic credential's name.
+        var known = ListCredentials();
+        var credential = new ComboBox
         {
-            Header = "Credential (generic credential name in Credential Manager)",
-            Text = session.Credential ?? string.Empty,
-            PlaceholderText = "Empty: mstsc asks for the password"
+            Header = $"Credential (generic credential in Credential Manager; {CredentialStore.SessionCredentialPrefix}* listed)",
+            IsEditable = true,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            PlaceholderText = "Empty: mstsc asks for the password",
+            ItemsSource = known.Select(item => item.Name).ToList(),
+            Text = session.Credential ?? string.Empty
         };
+        var credentialUser = new TextBlock
+        {
+            Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
+            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"]
+        };
+
+        void ShowCredentialUser(string text)
+        {
+            text = text.Trim();
+            var match = known.FirstOrDefault(item => string.Equals(item.Name, text, StringComparison.OrdinalIgnoreCase));
+            credentialUser.Text = text.Length == 0 ? string.Empty
+                : match.Name is not null ? $"Logs in as {match.UserName ?? "(no username)"}"
+                : text.StartsWith(CredentialStore.SessionCredentialPrefix, StringComparison.OrdinalIgnoreCase)
+                    ? "Not in Credential Manager yet."
+                    : string.Empty;
+        }
+
+        credential.SelectionChanged += (_, _) => ShowCredentialUser(credential.SelectedItem as string ?? credential.Text);
+        credential.TextSubmitted += (_, args) => ShowCredentialUser(args.Text);
+        ShowCredentialUser(credential.Text);
         var username = new TextBox
         {
             Header = "Username (optional, overrides the credential's)",
@@ -220,7 +257,7 @@ public sealed partial class RdpSessionsPage : Page
         {
             XamlRoot = XamlRoot,
             Title = title,
-            Content = new StackPanel { Spacing = 8, MinWidth = 400, Children = { name, host, credential, username, size, monitor, windowTitle, admin, error } },
+            Content = new StackPanel { Spacing = 8, MinWidth = 400, Children = { name, host, credential, credentialUser, username, size, monitor, windowTitle, admin, error } },
             PrimaryButtonText = "OK",
             CloseButtonText = "Cancel",
             DefaultButton = ContentDialogButton.Primary
@@ -245,6 +282,7 @@ public sealed partial class RdpSessionsPage : Page
 
         session.Name = name.Text.Trim();
         session.Host = host.Text.Trim();
+        // Text, not SelectedItem: after picking an item and then typing, SelectedItem is stale.
         session.Credential = NullIfEmpty(credential.Text);
         session.Username = NullIfEmpty(username.Text);
         session.Size = size.SelectedItem as string is { } chosen && chosen != DefaultSize ? chosen : null;
@@ -252,6 +290,20 @@ public sealed partial class RdpSessionsPage : Page
         session.Title = NullIfEmpty(windowTitle.Text);
         session.Admin = admin.IsChecked == true ? true : null;
         return true;
+    }
+
+    /// <summary>The DevLauncher_ credentials, or none when Credential Manager cannot be read.</summary>
+    private static IReadOnlyList<(string Name, string? UserName)> ListCredentials()
+    {
+        try
+        {
+            return CredentialStore.ListGeneric(CredentialStore.SessionCredentialPrefix);
+        }
+        catch (Exception ex)
+        {
+            State.LogMessage($"Could not list credentials: {ex.Message}");
+            return [];
+        }
     }
 
     private static string? NullIfEmpty(string text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();

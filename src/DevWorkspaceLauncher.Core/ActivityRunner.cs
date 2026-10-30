@@ -9,13 +9,13 @@ public static class ActivityRunner
 
         try
         {
-            var plan = ActivityPlanner.Plan(activity, config, AppController.IsRunning);
+            var plan = ActivityPlanner.Plan(activity, config, AppController.IsRunning, SshAliases(activity, log));
             foreach (var note in plan.Notes)
             {
                 log(note);
             }
 
-            foreach (var step in plan.Steps.Where(step => step.Kind != ActivityStepKind.OpenWorkspace))
+            foreach (var step in plan.Steps.Where(step => step.Kind is not (ActivityStepKind.OpenWorkspace or ActivityStepKind.ConnectRdp or ActivityStepKind.ConnectSsh)))
             {
                 switch (step.Kind)
                 {
@@ -37,7 +37,7 @@ public static class ActivityRunner
                 }
             }
 
-            // Opens come last in a plan, and go together so VS Code gets its pause between windows.
+            // Opens come after the app steps, and go together so VS Code gets its pause between windows.
             var opens = plan.Steps
                 .Where(step => step.Kind == ActivityStepKind.OpenWorkspace)
                 .Select(step => (step.Uri!, step.Name))
@@ -47,11 +47,48 @@ public static class ActivityRunner
                 await WorkspaceController.OpenAsync(opens, config.VsCodeExecutable, log);
             }
 
+            // The connection's clean-up (temporary .rdp file and credential) runs on after the activity.
+            foreach (var step in plan.Steps.Where(step => step.Kind == ActivityStepKind.ConnectRdp))
+            {
+                try
+                {
+                    RdpLauncher.Launch(RdpResolver.Resolve(config, step.RdpSession), step.Name, log);
+                }
+                catch (Exception ex)
+                {
+                    log($"Could not connect to '{step.Name}': {ex.Message}");
+                }
+            }
+
+            foreach (var step in plan.Steps.Where(step => step.Kind == ActivityStepKind.ConnectSsh))
+            {
+                await SshLauncher.ConnectAsync(step.Name, config.SshClient, log);
+            }
+
             log($"Activity '{activity.Name}' complete.");
         }
         catch (Exception ex)
         {
             log($"Error: {ex.Message}");
+        }
+    }
+
+    /// <summary>The aliases in ~/.ssh/config, read only when the activity connects to SSH hosts.</summary>
+    private static IReadOnlyCollection<string>? SshAliases(Activity activity, Action<string> log)
+    {
+        if (activity.SshHosts.Count == 0)
+        {
+            return null;
+        }
+
+        try
+        {
+            return SshConfigStore.Load().Document.Hosts.Select(host => host.Alias).ToList();
+        }
+        catch (Exception ex)
+        {
+            log($"Could not read {SshConfigStore.FilePath}: {ex.Message}");
+            return [];
         }
     }
 }

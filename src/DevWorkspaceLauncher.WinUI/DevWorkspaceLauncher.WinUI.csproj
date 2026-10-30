@@ -6,6 +6,7 @@
     <RootNamespace>DevWorkspaceLauncher.WinUI</RootNamespace>
     <AssemblyName>DevWorkspaceLauncher.WinUI</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
     <UseWinUI>true</UseWinUI>
@@ -20,6 +21,11 @@
     <SelfContained>false</SelfContained>
     <PublishDir>bin\$(Configuration)\$(TargetFramework)\publish\</PublishDir>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The exe carries the icon for Explorer and the tray; the window loads it from this copy. -->
+    <Content Include="Assets\AppIcon.ico" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.5.1" />

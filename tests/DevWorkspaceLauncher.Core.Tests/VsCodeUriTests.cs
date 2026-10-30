@@ -79,4 +79,14 @@ public class VsCodeUriTests
         Assert.Equal("not-a-uri", name);
         Assert.Equal("not-a-uri", location);
     }
+
+    [Theory]
+    [InlineData("file:///c%3A/cce/workspaces/develop/develop.code-workspace", "develop", "develop")]
+    [InlineData("vscode-remote://ssh-remote%2Bcce-dev03/home/cvb/develop.code-workspace", "develop", "develop (cce-dev03)")]
+    [InlineData("vscode-remote://wsl%2BUbuntu/home/cvb/code/b1", "b1", "b1 (Ubuntu)")]
+    [InlineData("vscode-remote://ssh-remote%2Bcce-dev03/home/cvb/develop", "develop (cce-dev03)", "develop (cce-dev03)")]
+    public void Title_adds_the_remote_host_unless_the_name_has_it(string uri, string name, string expected)
+    {
+        Assert.Equal(expected, VsCodeUri.Title(name, uri));
+    }
 }

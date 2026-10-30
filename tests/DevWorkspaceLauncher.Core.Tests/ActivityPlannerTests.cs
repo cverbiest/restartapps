@@ -15,14 +15,21 @@ public class ActivityPlannerTests
             new AppConfiguration { Name = "N", Commandline = "n.exe", StopMethod = StopMethod.None },
             new AppConfiguration { Name = "D", Commandline = "d.exe", Disabled = true }
         ],
-        Workspaces = [new WorkspaceFavorite { Name = "One (pinned)", Uri = U1, WindowTitle = "one*" }]
+        Workspaces = [new WorkspaceFavorite { Name = "One (pinned)", Uri = U1, WindowTitle = "one*" }],
+        RdpSessions = [new RdpSession { Name = "demo", Host = "demo25" }]
     };
 
     private readonly HashSet<string> _running = new(StringComparer.OrdinalIgnoreCase);
 
-    private ActivityPlan Plan(ActivityApp[]? apps = null, ActivityWorkspace[]? workspaces = null) =>
+    private ActivityPlan Plan(ActivityApp[]? apps = null, ActivityWorkspace[]? workspaces = null, string[]? rdpSessions = null) =>
         ActivityPlanner.Plan(
-            new Activity { Name = "X", Apps = [.. apps ?? []], Workspaces = [.. workspaces ?? []] },
+            new Activity
+            {
+                Name = "X",
+                Apps = [.. apps ?? []],
+                Workspaces = [.. workspaces ?? []],
+                RdpSessions = [.. (rdpSessions ?? []).Select(name => new ActivityRdpSession { Name = name })]
+            },
             _config,
             app => _running.Contains(app.Name));
 
@@ -160,5 +167,40 @@ public class ActivityPlannerTests
 
         Assert.Empty(plan.Steps);
         Assert.Equal(["Nothing to do."], plan.Notes);
+    }
+
+    [Fact]
+    public void Rdp_sessions_connect_last()
+    {
+        var plan = Plan(apps: [App("A", AppAction.Start)], workspaces: [new ActivityWorkspace { Uri = U2 }], rdpSessions: ["DEMO"]);
+
+        Assert.Equal(["StartApp A", "OpenWorkspace two", "ConnectRdp demo"], Describe(plan));
+        Assert.Same(_config.RdpSessions[0], plan.Steps[2].RdpSession);
+    }
+
+    [Fact]
+    public void Unknown_rdp_session_is_noted()
+    {
+        var plan = Plan(rdpSessions: ["gone"]);
+
+        Assert.Equal(["No RDP session named 'gone'; skipped.", "Nothing to do."], plan.Notes);
+    }
+
+    [Fact]
+    public void Ssh_hosts_connect_after_rdp_sessions_by_their_alias_in_the_file()
+    {
+        var plan = ActivityPlanner.Plan(
+            new Activity
+            {
+                Name = "X",
+                RdpSessions = [new ActivityRdpSession { Name = "demo" }],
+                SshHosts = [new ActivitySshHost { Name = "DEV03" }, new ActivitySshHost { Name = "gone" }]
+            },
+            _config,
+            _ => false,
+            sshAliases: ["dev03", "build"]);
+
+        Assert.Equal(["ConnectRdp demo", "ConnectSsh dev03"], Describe(plan));
+        Assert.Equal(["No SSH host 'gone' in ~/.ssh/config; skipped."], plan.Notes);
     }
 }

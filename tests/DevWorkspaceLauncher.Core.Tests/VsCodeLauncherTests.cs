@@ -89,4 +89,23 @@ public class VsCodeLauncherTests
         Assert.Equal("/c \"\"C:\\tools\\code.cmd\" --folder-uri \"x\"\"", info.Arguments);
         Assert.True(info.CreateNoWindow);
     }
+
+    [Theory]
+    [InlineData(@"C:\tools\Code.exe")]
+    [InlineData(@"C:\tools\code.cmd")]
+    public void Does_not_pass_on_ELECTRON_RUN_AS_NODE(string executable)
+    {
+        var previous = Environment.GetEnvironmentVariable("ELECTRON_RUN_AS_NODE");
+        Environment.SetEnvironmentVariable("ELECTRON_RUN_AS_NODE", "1");
+        try
+        {
+            var info = VsCodeLauncher.CreateStartInfo(executable, "--folder-uri \"x\"");
+
+            Assert.False(info.Environment.ContainsKey("ELECTRON_RUN_AS_NODE"));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("ELECTRON_RUN_AS_NODE", previous);
+        }
+    }
 }

@@ -14,8 +14,9 @@ public sealed record RdpImportResult(IReadOnlyList<RdpSession> Added, IReadOnlyL
 /// are not imported; a favorite's <c>/i:profile</c> becomes the session's Credential, so one generic
 /// credential of that name in Credential Manager serves every session that used the profile.
 /// <para>
-/// RDP+ stores favorites encrypted, so the input is the decrypted listing that
-/// <c>tools/Export-RdpPlusFavorites.ps1</c> writes: one <c>name | secure=... | command line</c> per line.
+/// RDP+ stores favorites encrypted, so the input is a decrypted listing: one
+/// <c>name | secure=... | command line</c> per favorite, for example
+/// <c>build server | secure=False | /v:build01 /i:cce_cvb /fit:65%</c>.
 /// </para>
 /// </summary>
 public static partial class RdpPlusImport

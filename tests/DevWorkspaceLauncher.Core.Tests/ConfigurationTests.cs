@@ -115,6 +115,37 @@ public class ConfigurationTests
     }
 
     [Fact]
+    public void Round_trips_favorites_through_a_save()
+    {
+        var configuration = new ConfigurationFile
+        {
+            Profiles = [new Profile { Name = "Work", Favorite = true }],
+            WorkspaceProfiles = [new WorkspaceProfile { Name = "Linux dev", Favorite = true }],
+            Activities = [new Activity { Name = "Deploy", Favorite = true }],
+            RdpSessions = [new RdpSession { Name = "demo", Host = "demo25", Favorite = true }]
+        };
+
+        var reloaded = AppConfigurationStore.Parse(AppConfigurationStore.ToJson(configuration));
+
+        Assert.True(Assert.Single(reloaded.Profiles).Favorite);
+        Assert.True(Assert.Single(reloaded.WorkspaceProfiles).Favorite);
+        Assert.True(Assert.Single(reloaded.Activities).Favorite);
+        Assert.True(Assert.Single(reloaded.RdpSessions).Favorite);
+    }
+
+    [Fact]
+    public void Omits_favorite_when_it_is_not_set()
+    {
+        var configuration = new ConfigurationFile
+        {
+            Profiles = [new Profile { Name = "Work" }],
+            RdpSessions = [new RdpSession { Name = "demo", Host = "demo25" }]
+        };
+
+        Assert.DoesNotContain("Favorite", AppConfigurationStore.ToJson(configuration));
+    }
+
+    [Fact]
     public void Omits_the_executable_override_when_it_is_not_set()
     {
         var json = AppConfigurationStore.ToJson(new ConfigurationFile());

@@ -7,20 +7,21 @@ namespace DevWorkspaceLauncher.WinUI;
 
 public sealed partial class MainWindow : Window
 {
+    private const string StartTag = "page:start";
+    private const string AllItemsTag = "page:all";
+    private const string ActivitiesTag = "page:activities";
     private const string WorkspacesTag = "page:workspaces";
     private const string AppsTag = "page:apps";
     private const string RdpTag = "page:rdp";
+    private const string SshTag = "page:ssh";
     private const string LogTag = "page:log";
 
     private static AppState State => App.State;
 
-    private readonly NavigationViewItem _workspacesItem = Page("Workspaces", "", WorkspacesTag);
-    private readonly NavigationViewItem _appsItem = Page("Apps", "", AppsTag);
-    private readonly NavigationViewItem _rdpItem = Page("RDP sessions", "", RdpTag);
-    private readonly NavigationViewItem _logItem = Page("Activity log", "", LogTag);
+    private readonly NavigationViewItem _startItem = Page("Start", "", StartTag);
 
-    private object? _lastRunTag;
-    private DateTime _lastRunAt;
+    /// <summary>The parameter the shown page was opened with; it tells All items from Activities.</summary>
+    private string? _shownParameter;
 
     public MainWindow()
     {
@@ -31,6 +32,17 @@ public sealed partial class MainWindow : Window
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
         AppWindow.Resize(new Windows.Graphics.SizeInt32(1100, 780));
+        AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "AppIcon.ico"));
+
+        // Closing hides the window to the tray; only Exit in the tray menu ends the app.
+        AppWindow.Closing += (sender, args) =>
+        {
+            if (!App.IsExiting)
+            {
+                args.Cancel = true;
+                sender.Hide();
+            }
+        };
 
         Activated += (_, args) =>
         {
@@ -40,95 +52,25 @@ public sealed partial class MainWindow : Window
             }
         };
 
-        State.ConfigurationChanged += (_, _) => BuildMenu();
         State.BusyChanged += (_, _) => Working.Visibility = State.Busy ? Visibility.Visible : Visibility.Collapsed;
         State.MessageLogged += (_, message) => ShowStatus(message);
 
-        BuildMenu();
-        Nav.SelectedItem = _workspacesItem;
-        ContentFrame.Navigate(typeof(WorkspacesPage));
+        Nav.MenuItems.Add(_startItem);
+        Nav.MenuItems.Add(Page("All items", "", AllItemsTag));
+        Nav.MenuItems.Add(Page("Activities", "", ActivitiesTag));
+        Nav.MenuItems.Add(Page("VS Code workspaces", "", WorkspacesTag));
+        Nav.MenuItems.Add(Page("Apps", "", AppsTag));
+        Nav.MenuItems.Add(Page("RDP sessions", "", RdpTag));
+        Nav.MenuItems.Add(Page("SSH hosts", "", SshTag));
+        Nav.MenuItems.Add(Page("Activity log", "", LogTag));
+        Nav.SelectedItem = _startItem;
+        ContentFrame.Navigate(typeof(StartPage));
     }
 
     private static NavigationViewItem Page(string text, string glyph, string tag) =>
         new() { Content = text, Icon = new FontIcon { Glyph = glyph }, Tag = tag };
 
-    /// <summary>
-    /// Builds the rail: activities, the pages, then sessions and app profiles. Invoking an activity,
-    /// session or profile runs it at once, like the one-click buttons of the WinForms app.
-    /// </summary>
-    private void BuildMenu()
-    {
-        var selected = Nav.SelectedItem;
-        Nav.MenuItems.Clear();
-
-        Nav.MenuItems.Add(new NavigationViewItemHeader { Content = "Activities" });
-        if (State.Config.Activities.Count == 0)
-        {
-            Nav.MenuItems.Add(Hint("None yet", "Add activities to the configuration file (Settings > Edit Config)."));
-        }
-
-        foreach (var activity in State.Config.Activities)
-        {
-            Nav.MenuItems.Add(Runnable(activity.Name, "", activity, $"Run '{activity.Name}'."));
-        }
-
-        Nav.MenuItems.Add(new NavigationViewItemSeparator());
-        Nav.MenuItems.Add(_workspacesItem);
-        Nav.MenuItems.Add(_appsItem);
-        Nav.MenuItems.Add(_rdpItem);
-        Nav.MenuItems.Add(_logItem);
-
-        if (State.Config.RdpSessions.Count > 0)
-        {
-            Nav.MenuItems.Add(new NavigationViewItemHeader { Content = "RDP" });
-            foreach (var session in State.Config.RdpSessions)
-            {
-                Nav.MenuItems.Add(Runnable(session.Name, "", session, $"Connect to {session.Host}."));
-            }
-        }
-
-        if (State.Config.WorkspaceProfiles.Count > 0)
-        {
-            Nav.MenuItems.Add(new NavigationViewItemHeader { Content = "Sessions" });
-            foreach (var session in State.Config.WorkspaceProfiles)
-            {
-                Nav.MenuItems.Add(Runnable(session.Name, "", session, $"Open the {session.Workspaces.Count} workspace(s) in '{session.Name}'."));
-            }
-        }
-
-        if (State.Config.Profiles.Count > 0)
-        {
-            Nav.MenuItems.Add(new NavigationViewItemHeader { Content = "App profiles" });
-            foreach (var profile in State.Config.Profiles)
-            {
-                Nav.MenuItems.Add(Runnable(profile.Name, "", profile, $"Load '{profile.Name}' and run Kill & Start Selected."));
-            }
-        }
-
-        Nav.SelectedItem = selected;
-    }
-
-    private static NavigationViewItem Runnable(string text, string glyph, object tag, string tooltip)
-    {
-        var item = new NavigationViewItem
-        {
-            Content = text,
-            Icon = new FontIcon { Glyph = glyph },
-            Tag = tag,
-            SelectsOnInvoked = false
-        };
-        ToolTipService.SetToolTip(item, tooltip);
-        return item;
-    }
-
-    private static NavigationViewItem Hint(string text, string tooltip)
-    {
-        var item = new NavigationViewItem { Content = text, IsEnabled = false, SelectsOnInvoked = false };
-        ToolTipService.SetToolTip(item, tooltip);
-        return item;
-    }
-
-    private async void Nav_ItemInvoked(NavigationView sender, NavigationViewItemInvokedEventArgs args)
+    private void Nav_ItemInvoked(NavigationView sender, NavigationViewItemInvokedEventArgs args)
     {
         if (args.IsSettingsInvoked)
         {
@@ -136,14 +78,20 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        var tag = args.InvokedItemContainer?.Tag;
-        if (tag is Activity or WorkspaceProfile or Profile or RdpSession && IsRepeat(tag))
+        switch (args.InvokedItemContainer?.Tag)
         {
-            return;
-        }
+            case StartTag:
+                Show(typeof(StartPage));
+                break;
 
-        switch (tag)
-        {
+            case AllItemsTag:
+                Show(typeof(LaunchItemsPage));
+                break;
+
+            case ActivitiesTag:
+                Show(typeof(LaunchItemsPage), LaunchItemsPage.ActivitiesOnly);
+                break;
+
             case WorkspacesTag:
                 Show(typeof(WorkspacesPage));
                 break;
@@ -156,49 +104,24 @@ public sealed partial class MainWindow : Window
                 Show(typeof(RdpSessionsPage));
                 break;
 
+            case SshTag:
+                Show(typeof(SshHostsPage));
+                break;
+
             case LogTag:
                 Show(typeof(LogPage));
                 break;
-
-            case RdpSession rdpSession:
-                State.ConnectRdp(rdpSession);
-                break;
-
-            case Activity activity:
-                await State.RunActivityAsync(activity);
-                break;
-
-            case WorkspaceProfile session:
-                await State.RunSessionAsync(session);
-                break;
-
-            case Profile profile:
-                await State.RunProfileAsync(profile);
-                break;
         }
     }
 
-    private void Show(Type page)
+    /// <summary>Shows a page; All items and Activities are one page with a different parameter.</summary>
+    private void Show(Type page, string? parameter = null)
     {
-        if (ContentFrame.CurrentSourcePageType != page)
+        if (ContentFrame.CurrentSourcePageType != page || _shownParameter != parameter)
         {
-            ContentFrame.Navigate(page);
+            ContentFrame.Navigate(page, parameter);
+            _shownParameter = parameter;
         }
-    }
-
-    /// <summary>
-    /// Whether this item was invoked less than a second ago. Items that run something do not stay
-    /// selected, and NavigationView can bounce an invocation of such an item - it re-invokes the
-    /// previously selected page and then the item again - which must not run the item twice. Keeps a
-    /// double-click from running it twice as well.
-    /// </summary>
-    private bool IsRepeat(object tag)
-    {
-        var now = DateTime.UtcNow;
-        var repeat = ReferenceEquals(tag, _lastRunTag) && now - _lastRunAt < TimeSpan.FromSeconds(1);
-        _lastRunTag = tag;
-        _lastRunAt = now;
-        return repeat;
     }
 
     /// <summary>Shows the latest log line in the banner; problems as warnings.</summary>
