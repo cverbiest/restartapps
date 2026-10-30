@@ -45,13 +45,23 @@ if (-not $trufflehog) {
     exit 2
 }
 
+# A clean scan lets the command run and shows its result: to the user in the UI, and to Claude, who
+# includes it when reporting the commit.
+function Report([string]$message) {
+    @{
+        systemMessage      = $message
+        hookSpecificOutput = @{ hookEventName = 'PreToolUse'; additionalContext = "Secret scan before this commit: $message" }
+    } | ConvertTo-Json -Compress
+}
+
 Set-Location (git rev-parse --show-toplevel)
 $scan = Join-Path ([IO.Path]::GetTempPath()) "scan-staged-$([guid]::NewGuid().ToString('N'))"
 New-Item -ItemType Directory -Path $scan | Out-Null
 try {
     # git prints paths with / and quotes unusual ones unless -z is used.
     function Paths([string[]]$arguments) {
-        ((& git @arguments) -join "`0").Split("`0", [StringSplitOptions]::RemoveEmptyEntries)
+        # Warnings (line endings) go to stderr; only the paths are wanted.
+        ((& git @arguments 2>$null) -join "`0").Split("`0", [StringSplitOptions]::RemoveEmptyEntries)
     }
 
     $staged = Paths @('diff', '--cached', '--name-only', '--diff-filter=ACMR', '-z')
@@ -71,12 +81,22 @@ try {
         }
     }
 
-    if (-not (Get-ChildItem $scan -Recurse -File)) {
+    $files = @(Get-ChildItem $scan -Recurse -File)
+    if ($files.Count -eq 0) {
+        Report 'trufflehog: nothing to scan (no staged, changed or untracked files).'
         exit 0
     }
 
-    $output = & $trufflehog filesystem $scan --no-update --json --fail 2>$null
-    if ($LASTEXITCODE -eq 0) {
+    # Results go to stdout as JSON lines, trufflehog's own log (with its summary) to stderr.
+    $all = & $trufflehog filesystem $scan --no-update --json --fail 2>&1
+    $exitCode = $LASTEXITCODE
+    $output = @($all | Where-Object { $_ -isnot [System.Management.Automation.ErrorRecord] })
+    if ($exitCode -eq 0) {
+        $stagedCount = @($files | Where-Object { $_.FullName.StartsWith((Join-Path $scan 'staged')) }).Count
+        $summary = $all | Where-Object { $_ -is [System.Management.Automation.ErrorRecord] -and "$_" -match '"finished scanning"' } |
+            Select-Object -Last 1 | ForEach-Object { "$_" | ConvertFrom-Json }
+        $detail = if ($summary) { ", $($summary.bytes) bytes, trufflehog $($summary.trufflehog_version)" } else { '' }
+        Report "trufflehog: 0 findings in $($files.Count) file(s) ($stagedCount staged, $($files.Count - $stagedCount) not staged yet$detail)."
         exit 0
     }
 
@@ -89,7 +109,7 @@ try {
     })
 
     if ($findings.Count -eq 0) {
-        [Console]::Error.WriteLine("Commit blocked: trufflehog exited with code $LASTEXITCODE without findings; run it by hand to see why.")
+        [Console]::Error.WriteLine("Commit blocked: trufflehog exited with code $exitCode without findings; run it by hand to see why.")
         exit 2
     }
 
