@@ -35,7 +35,7 @@ public sealed partial class LaunchItemsPage : Page
         _activitiesOnly = e.Parameter as string == ActivitiesOnly;
         Heading.Text = _activitiesOnly ? "Activities" : "All items";
         Intro.Text = _activitiesOnly
-            ? "An activity starts and stops apps, opens and closes workspaces and connects RDP sessions in one click. Add items to one with Add to activity on any tab; Edit changes what it does with each. Pin an activity to put it on the start page and in the tray."
+            ? "An activity starts and stops apps, opens and closes workspaces and connects RDP sessions and SSH hosts in one click. Add items to one with Add to activity on any tab; Edit changes what it does with each. Pin an activity to put it on the start page and in the tray."
             : "Everything that runs with one click. Double-click to run; pin an item to put it on the start page and in the tray. A pinned app starts, or comes to the front when it is running.";
         NewButton.Visibility = EditButton.Visibility = _activitiesOnly ? Visibility.Visible : Visibility.Collapsed;
         State.ConfigurationChanged += State_Changed;

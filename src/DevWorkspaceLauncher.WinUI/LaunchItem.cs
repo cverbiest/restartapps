@@ -22,7 +22,7 @@ public sealed class LaunchItem
 
     private static AppState State => App.State;
 
-    /// <summary>The configuration object: an <see cref="Activity"/>, <see cref="AppConfiguration"/> or <see cref="RdpSession"/>.</summary>
+    /// <summary>The item: an <see cref="Activity"/>, <see cref="AppConfiguration"/>, <see cref="RdpSession"/> or <see cref="SshHost"/>.</summary>
     public IFavorite Target { get; }
 
     public string Name => ItemActions.NameOf(Target);
@@ -59,7 +59,11 @@ public sealed class LaunchItem
         .. config.RdpSessions.Select(session => new LaunchItem(
             session, "RDP session", "",
             $"Connect to {session.Host}.",
-            () => State.ConnectRdp(session)))
+            () => State.ConnectRdp(session))),
+        .. State.SshHosts.Select(host => new LaunchItem(
+            host, "SSH host", "",
+            $"Connect to {host.Alias} with ssh.",
+            () => State.ConnectSsh(host)))
     ];
 
     public static IEnumerable<LaunchItem> Activities(ConfigurationFile config) =>
@@ -98,6 +102,11 @@ public sealed class LaunchItem
         if (activity.RdpSessions.Count > 0)
         {
             parts.Add($"{activity.RdpSessions.Count} RDP session(s)");
+        }
+
+        if (activity.SshHosts.Count > 0)
+        {
+            parts.Add($"{activity.SshHosts.Count} SSH host(s)");
         }
 
         return parts.Count == 0 ? $"'{activity.Name}' is empty." : $"Run '{activity.Name}': {string.Join(", ", parts)}.";

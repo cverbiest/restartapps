@@ -47,6 +47,42 @@ public static class ActivityOperations
         return true;
     }
 
+    /// <summary>Adds the SSH host. False when the activity already has it.</summary>
+    public static bool AddSshHost(Activity activity, string alias)
+    {
+        if (activity.SshHosts.Any(host => Same(host.Name, alias)))
+        {
+            return false;
+        }
+
+        activity.SshHosts.Add(new ActivitySshHost { Name = alias });
+        return true;
+    }
+
+    /// <summary>Follows a renamed alias in the activities and the host's launcher settings.</summary>
+    public static void RenameSshHost(ConfigurationFile config, string oldAlias, string newAlias)
+    {
+        foreach (var host in config.Activities.SelectMany(activity => activity.SshHosts).Where(host => Same(host.Name, oldAlias)))
+        {
+            host.Name = newAlias;
+        }
+
+        foreach (var settings in config.SshHosts.Where(settings => Same(settings.Alias, oldAlias)))
+        {
+            settings.Alias = newAlias;
+        }
+    }
+
+    public static void RemoveSshHost(ConfigurationFile config, string alias)
+    {
+        foreach (var activity in config.Activities)
+        {
+            activity.SshHosts.RemoveAll(host => Same(host.Name, alias));
+        }
+
+        config.SshHosts.RemoveAll(settings => Same(settings.Alias, alias));
+    }
+
     public static void RenameApp(ConfigurationFile config, string oldName, string newName)
     {
         foreach (var app in config.Activities.SelectMany(activity => activity.Apps).Where(app => Same(app.Name, oldName)))

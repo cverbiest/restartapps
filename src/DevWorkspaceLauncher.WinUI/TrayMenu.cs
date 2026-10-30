@@ -16,6 +16,7 @@ internal static class TrayMenu
             TrayEntry.Separator
         };
 
+        State.ReloadSshHosts();
         var favorites = LaunchItem.Favorites(State.Config).ToList();
         entries.AddRange(favorites.Count > 0
             ? favorites.Select(item => new TrayEntry(item.Name, item.Run))

@@ -65,6 +65,19 @@ public sealed class Activity : IFavorite
         get;
         set => field = value ?? [];
     } = [];
+
+    /// <summary>The SSH hosts to connect to. Never null: <c>"SshHosts": null</c> reads as an empty list.</summary>
+    public List<ActivitySshHost> SshHosts
+    {
+        get;
+        set => field = value ?? [];
+    } = [];
+}
+
+public sealed class ActivitySshHost
+{
+    /// <summary>The alias of the host in <c>~/.ssh/config</c>, matched case-insensitively.</summary>
+    public required string Name { get; set; }
 }
 
 public sealed class ActivityRdpSession

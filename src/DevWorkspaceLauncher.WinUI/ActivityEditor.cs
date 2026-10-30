@@ -43,9 +43,16 @@ internal static class ActivityEditor
                 remove: () => activity.RdpSessions.Remove(session));
         }
 
+        foreach (var host in activity.SshHosts)
+        {
+            AddRow("SSH host", host.Name, new TextBlock { Text = "Connect", VerticalAlignment = VerticalAlignment.Center },
+                keep: () => { },
+                remove: () => activity.SshHosts.Remove(host));
+        }
+
         var empty = new TextBlock
         {
-            Text = "Empty. Select items on the All items, Apps, VS Code workspaces or RDP sessions tab and use Add to activity.",
+            Text = "Empty. Select items on the All items, Apps, VS Code workspaces, RDP sessions or SSH hosts tab and use Add to activity.",
             TextWrapping = TextWrapping.Wrap,
             Visibility = rows.Children.Count == 0 ? Visibility.Visible : Visibility.Collapsed
         };

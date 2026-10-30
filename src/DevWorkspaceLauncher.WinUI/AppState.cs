@@ -73,6 +73,10 @@ public sealed class AppState
             LogMessage($"Failed to load configuration: {ex.Message} Nothing will be saved until the file loads; fix it and it reloads.");
         }
 
+        // ~/.ssh/config is read again whenever the window comes to the front, so edits made elsewhere show.
+        ReloadSshHosts();
+        WindowActivated += (_, _) => ReloadSshHosts();
+
         try
         {
             _watcher = new ConfigurationWatcher(ConfigPath) { LastKnownJson = lastKnownJson };
@@ -107,6 +111,7 @@ public sealed class AppState
 
         try
         {
+            SshHost.Prune(Config);
             var json = AppConfigurationStore.Save(Config);
             if (_watcher is not null)
             {
@@ -235,6 +240,73 @@ public sealed class AppState
             LogMessage($"Could not connect to '{session.Name}': {ex.Message}");
         }
     }
+
+    // --------------------------------------------------------------- SSH hosts
+
+    /// <summary>~/.ssh/config as last read or written here.</summary>
+    private SshConfigSnapshot _ssh = new(SshConfigDocument.Parse(string.Empty), string.Empty);
+
+    public string SshConfigPath => SshConfigStore.FilePath;
+
+    /// <summary>The connectable hosts in ~/.ssh/config, with their pins from the configuration.</summary>
+    public IReadOnlyList<SshHost> SshHosts => _ssh.Document.Hosts.Select(entry => new SshHost(entry, Config)).ToList();
+
+    /// <summary>Reads ~/.ssh/config again; the pages refresh when it changed.</summary>
+    public void ReloadSshHosts()
+    {
+        try
+        {
+            var snapshot = SshConfigStore.Load();
+            if (snapshot.Text != _ssh.Text)
+            {
+                _ssh = snapshot;
+                ConfigurationChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+        catch (Exception ex)
+        {
+            LogMessage($"Could not read {SshConfigPath}: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Changes ~/.ssh/config with <paramref name="edit"/> and writes it, unless the file changed since it
+    /// was last read here: then it is only read again, and the edit has to be redone on what it now holds.
+    /// </summary>
+    public bool EditSshConfig(Func<SshConfigDocument, bool> edit)
+    {
+        try
+        {
+            var current = SshConfigStore.Load();
+            if (current.Text != _ssh.Text)
+            {
+                _ssh = current;
+                ConfigurationChanged?.Invoke(this, EventArgs.Empty);
+                LogMessage($"Not saved: {SshConfigPath} changed outside the launcher. It has been read again; please redo the change.");
+                return false;
+            }
+
+            if (!edit(current.Document))
+            {
+                return false;
+            }
+
+            var text = current.Document.ToText();
+            SshConfigStore.Save(SshConfigPath, current.Text, text);
+            _ssh = new SshConfigSnapshot(SshConfigDocument.Parse(text), text);
+            LogMessage($"Saved {SshConfigPath}.");
+            ConfigurationChanged?.Invoke(this, EventArgs.Empty);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            LogMessage($"Failed to save {SshConfigPath}: {ex.Message}");
+            ReloadSshHosts();
+            return false;
+        }
+    }
+
+    public void ConnectSsh(SshHost host) => _ = SshLauncher.ConnectAsync(host.Alias, Config.SshClient, LogMessage);
 
     /// <summary>
     /// Turns app profiles and workspace sessions into activities, once: after a copy of the file is

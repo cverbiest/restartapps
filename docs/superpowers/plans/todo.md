@@ -48,6 +48,15 @@ can be marked as favorite = on start page and tray **done** (pin on All items, A
   Activities, Apps, VS Code workspaces, RDP sessions; the pin/star column sorts favorites first); every
   grid keeps its selection when it refreshes **done**
 
+## SSH hosts
+
+* A tab to edit the entries of `.ssh/config` **done** (SSH hosts tab: connect, add, edit, delete, pin,
+  add to activity; the file stays the one list and keeps everything the tab does not edit; design in
+  `docs/superpowers/specs/2026-10-29-ssh-hosts-design.md`)
+* SSH hosts are launch items: All items, start page, tray, activities **done**
+* Start them with WezTerm **done** (a tab in the host's `SSH:<alias>` domain in the running WezTerm, else a
+  new WezTerm window; Windows Terminal stays a choice in Settings)
+
 ## App definitions & profiles
 
 * Split the app definitions and the app profile definitions — decided 2026-10-27: app profiles and

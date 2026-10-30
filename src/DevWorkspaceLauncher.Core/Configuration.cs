@@ -160,6 +160,17 @@ public sealed class ConfigurationFile
     public List<RdpSession> RdpSessions { get; set; } = [];
 
     /// <summary>
+    /// The launcher's settings for SSH hosts (pins), by alias. The hosts themselves are in
+    /// <c>~/.ssh/config</c>; see <see cref="SshConfigStore"/>.
+    /// </summary>
+    public List<SshHostSettings> SshHosts { get; set; } = [];
+
+    /// <summary>The terminal SSH hosts open in. Absent means WezTerm when it is installed, else Windows Terminal.</summary>
+    [JsonConverter(typeof(SshClientConverter))]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public SshClient? SshClient { get; set; }
+
+    /// <summary>
     /// Window size presets for RDP sessions. One named like a built-in preset replaces it; see
     /// <see cref="RdpPresets"/>.
     /// </summary>

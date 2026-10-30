@@ -13,6 +13,7 @@ public sealed partial class MainWindow : Window
     private const string WorkspacesTag = "page:workspaces";
     private const string AppsTag = "page:apps";
     private const string RdpTag = "page:rdp";
+    private const string SshTag = "page:ssh";
     private const string LogTag = "page:log";
 
     private static AppState State => App.State;
@@ -60,6 +61,7 @@ public sealed partial class MainWindow : Window
         Nav.MenuItems.Add(Page("VS Code workspaces", "", WorkspacesTag));
         Nav.MenuItems.Add(Page("Apps", "", AppsTag));
         Nav.MenuItems.Add(Page("RDP sessions", "", RdpTag));
+        Nav.MenuItems.Add(Page("SSH hosts", "", SshTag));
         Nav.MenuItems.Add(Page("Activity log", "", LogTag));
         Nav.SelectedItem = _startItem;
         ContentFrame.Navigate(typeof(StartPage));
@@ -100,6 +102,10 @@ public sealed partial class MainWindow : Window
 
             case RdpTag:
                 Show(typeof(RdpSessionsPage));
+                break;
+
+            case SshTag:
+                Show(typeof(SshHostsPage));
                 break;
 
             case LogTag:

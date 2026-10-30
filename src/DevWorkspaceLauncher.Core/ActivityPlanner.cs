@@ -7,12 +7,13 @@ public enum ActivityStepKind
     Wait,
     StartApp,
     OpenWorkspace,
-    ConnectRdp
+    ConnectRdp,
+    ConnectSsh
 }
 
 /// <summary>
 /// One thing a run does. <see cref="App"/> is set for app steps, <see cref="Uri"/> for workspace steps,
-/// <see cref="RdpSession"/> for RDP steps.
+/// <see cref="RdpSession"/> for RDP steps; an SSH step's <see cref="Name"/> is the host's alias.
 /// </summary>
 public sealed record ActivityStep(
     ActivityStepKind Kind,
@@ -29,13 +30,18 @@ public sealed record ActivityPlan(IReadOnlyList<ActivityStep> Steps, IReadOnlyLi
 /// Decides what running an activity does, without doing any of it, so the rules can be tested.
 /// <para>
 /// Order: every stop and close first, a pause if anything was stopped, then every start and open, then
-/// the RDP connections, each group in the order the activity lists them - the same shape as Kill &amp;&amp;
-/// Start.
+/// the RDP connections, then the SSH connections, each group in the order the activity lists them - the
+/// same shape as Kill &amp;&amp; Start.
 /// </para>
 /// </summary>
 public static class ActivityPlanner
 {
-    public static ActivityPlan Plan(Activity activity, ConfigurationFile config, Func<AppConfiguration, bool> isRunning)
+    /// <param name="sshAliases">The hosts in <c>~/.ssh/config</c>; null when the activity has no SSH hosts to look up.</param>
+    public static ActivityPlan Plan(
+        Activity activity,
+        ConfigurationFile config,
+        Func<AppConfiguration, bool> isRunning,
+        IReadOnlyCollection<string>? sshAliases = null)
     {
         var stops = new List<ActivityStep>();
         var closes = new List<ActivityStep>();
@@ -120,6 +126,18 @@ public static class ActivityPlanner
             }
 
             connects.Add(new ActivityStep(ActivityStepKind.ConnectRdp, session.Name, RdpSession: session));
+        }
+
+        foreach (var item in activity.SshHosts)
+        {
+            var alias = sshAliases?.FirstOrDefault(candidate => string.Equals(candidate, item.Name, StringComparison.OrdinalIgnoreCase));
+            if (alias is null)
+            {
+                notes.Add($"No SSH host '{item.Name}' in ~/.ssh/config; skipped.");
+                continue;
+            }
+
+            connects.Add(new ActivityStep(ActivityStepKind.ConnectSsh, alias));
         }
 
         var steps = new List<ActivityStep>();

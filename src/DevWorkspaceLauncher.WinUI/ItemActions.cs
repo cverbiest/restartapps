@@ -5,8 +5,8 @@ namespace DevWorkspaceLauncher.WinUI;
 
 /// <summary>
 /// What every grid offers on its selected rows - quick search, delete, add to activity - for whatever
-/// the rows are: an <see cref="Activity"/>, <see cref="AppConfiguration"/>, <see cref="RdpSession"/>
-/// or <see cref="WorkspaceRow"/>.
+/// the rows are: an <see cref="Activity"/>, <see cref="AppConfiguration"/>, <see cref="RdpSession"/>,
+/// <see cref="SshHost"/> or <see cref="WorkspaceRow"/>.
 /// </summary>
 internal static class ItemActions
 {
@@ -22,6 +22,7 @@ internal static class ItemActions
         Activity activity => activity.Name,
         AppConfiguration app => app.Name,
         RdpSession session => session.Name,
+        SshHost host => host.Alias,
         WorkspaceRow row => row.Name,
         _ => item.ToString() ?? string.Empty
     };
@@ -47,12 +48,26 @@ internal static class ItemActions
 
         var names = string.Join(", ", items.Take(10).Select(item => $"'{NameOf(item)}'"))
             + (items.Count > 10 ? $" and {items.Count - 10} more" : string.Empty);
-        var usedIn = items.Count(item => item is AppConfiguration or RdpSession) > 0
-            ? " Apps and RDP sessions are also taken out of the activities that use them."
+        var usedIn = items.Any(item => item is AppConfiguration or RdpSession or SshHost)
+            ? " Apps, RDP sessions and SSH hosts are also taken out of the activities that use them."
             : string.Empty;
-        if (!await Dialogs.ConfirmAsync(root, "Delete", $"Delete {names}?{usedIn}"))
+        var sshHosts = items.OfType<SshHost>().ToList();
+        var fromFile = sshHosts.Count > 0 ? $" SSH hosts are removed from {State.SshConfigPath}." : string.Empty;
+        if (!await Dialogs.ConfirmAsync(root, "Delete", $"Delete {names}?{usedIn}{fromFile}"))
         {
             return;
+        }
+
+        // The file first: when it cannot be written, the hosts stay, pins and activities included.
+        if (sshHosts.Count > 0 && !State.EditSshConfig(document => sshHosts.Aggregate(false, (any, host) => document.Remove(host.Alias) | any)))
+        {
+            items = items.Where(item => item is not SshHost).ToList();
+            if (items.Count == 0)
+            {
+                return;
+            }
+
+            names = string.Join(", ", items.Select(item => $"'{NameOf(item)}'"));
         }
 
         var config = State.Config;
@@ -72,6 +87,10 @@ internal static class ItemActions
                 case RdpSession session:
                     config.RdpSessions.Remove(session);
                     ActivityOperations.RemoveRdpSession(config, session.Name);
+                    break;
+
+                case SshHost host:
+                    ActivityOperations.RemoveSshHost(config, host.Alias);
                     break;
 
                 case WorkspaceRow { Preferred: true } row:
@@ -144,6 +163,7 @@ internal static class ItemActions
             {
                 case AppConfiguration app when ActivityOperations.AddApp(activity, app.Name):
                 case RdpSession session when ActivityOperations.AddRdpSession(activity, session.Name):
+                case SshHost host when ActivityOperations.AddSshHost(activity, host.Alias):
                 case WorkspaceRow row when ActivityOperations.AddWorkspace(activity, row.Uri):
                     added++;
                     break;
