@@ -23,7 +23,7 @@ public class DroppedAppsTests : IDisposable
         var added = DroppedApps.Add(config, [path], _log.Add);
 
         var app = Assert.Single(added);
-        Assert.Same(app, Assert.Single(config.Apps));
+        Assert.Same(app, Assert.Single(config.Applications));
         Assert.Equal("tool", app.Name);
         Assert.Equal($"\"{path}\"", app.Commandline);
         Assert.True(app.Kill);
@@ -35,12 +35,12 @@ public class DroppedAppsTests : IDisposable
     public void Dropped_duplicate_name_is_skipped_and_logged()
     {
         var path = CreateFile("tool.exe");
-        var config = new ConfigurationFile { Apps = [new AppConfiguration { Name = "TOOL", Commandline = "x" }] };
+        var config = new ConfigurationFile { Actions = [new ApplicationAction { Name = "TOOL", Commandline = "x" }] };
 
         var added = DroppedApps.Add(config, [path, path], _log.Add);
 
         Assert.Empty(added);
-        Assert.Single(config.Apps);
+        Assert.Single(config.Applications);
         Assert.Contains("tool is already in the configuration.", _log);
     }
 
@@ -53,7 +53,7 @@ public class DroppedAppsTests : IDisposable
         var added = DroppedApps.Add(config, [_temp, missing], _log.Add);
 
         Assert.Empty(added);
-        Assert.Empty(config.Apps);
+        Assert.Empty(config.Applications);
         Assert.Equal([$"Ignoring folder: {_temp}", $"Ignoring missing file: {missing}"], _log);
     }
 }

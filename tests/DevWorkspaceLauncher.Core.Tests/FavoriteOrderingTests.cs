@@ -44,14 +44,14 @@ public class FavoriteOrderingTests
     {
         var config = new ConfigurationFile
         {
-            Apps = [new AppConfiguration { Name = "Teams", Commandline = "teams.exe", Favorite = true, FavoriteOrder = 2 }],
+            Actions = [new ApplicationAction { Name = "Teams", Commandline = "teams.exe", Favorite = true, FavoriteOrder = 2 }],
             RdpSessions = [new RdpSession { Name = "demo", Host = "demo25", Favorite = true }]
         };
 
         var json = AppConfigurationStore.ToJson(config);
         var reloaded = AppConfigurationStore.Parse(json);
 
-        Assert.Equal(2, reloaded.Apps[0].FavoriteOrder);
+        Assert.Equal(2, reloaded.Applications.First().FavoriteOrder);
         Assert.Equal(1, json.Split("FavoriteOrder").Length - 1);
     }
 }

@@ -41,8 +41,8 @@ public class ActivityMigrationTests
         Assert.Equal("Meeting", activity.Name);
         Assert.True(activity.Favorite);
         Assert.Equal(
-            [("Teams", AppAction.Restart), ("Outlook", AppAction.Stop), ("Spotify", AppAction.Start)],
-            activity.Apps.Select(app => (app.Name, app.Action)));
+            [("Teams", ActionVerb.Restart), ("Outlook", ActionVerb.Stop), ("Spotify", ActionVerb.Start)],
+            activity.Actions.Select(app => (app.Name, app.Action)));
         Assert.Contains(messages, message => message.Contains("Meeting"));
     }
 

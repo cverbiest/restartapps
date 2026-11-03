@@ -11,3 +11,4 @@ session (via `CLAUDE.md`) and opens the files it needs.
 - [Todo list](todo-list.md) — keep docs/superpowers/plans/todo.md updated, mark done items, never drop the user's items
 - [Publish before feedback](publish-before-feedback.md) — `dotnet publish` the app the user runs before asking them to try a change; stop a running copy yourself
 - [Consistent UX across tabs](consistent-ux-across-tabs.md) — same layout, search, multi-select, pins, sorting on every grid; differ only when relevant
+- [Laptop moves between monitor setups](laptop-moves-between-monitor-setups.md) — config stays put; monitors change between runs and while in the tray

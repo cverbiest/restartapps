@@ -14,7 +14,7 @@ public class ConfigurationWatcherTests : IDisposable
     public void Dispose() => Directory.Delete(_temp, recursive: true);
 
     private static string Json(string appName) =>
-        $$"""{ "Apps": [ { "Name": "{{appName}}", "Commandline": "x.exe" } ] }""";
+        $$"""{ "Actions": [ { "Name": "{{appName}}", "Commandline": "x.exe" } ] }""";
 
     private ConfigurationWatcher Start(out TaskCompletionSource<ConfigurationSnapshot> reloaded)
     {
@@ -34,7 +34,7 @@ public class ConfigurationWatcherTests : IDisposable
         File.WriteAllText(_path, Json("Changed"));
 
         var snapshot = await reloaded.Task.WaitAsync(TimeSpan.FromSeconds(3));
-        Assert.Equal("Changed", Assert.Single(snapshot.Configuration.Apps).Name);
+        Assert.Equal("Changed", Assert.Single(snapshot.Configuration.Applications).Name);
         Assert.Equal(Json("Changed"), watcher.LastKnownJson);
     }
 
@@ -60,7 +60,7 @@ public class ConfigurationWatcherTests : IDisposable
         File.WriteAllText(_path, Json("FromWriter"));
 
         var snapshot = await otherReloaded.Task.WaitAsync(TimeSpan.FromSeconds(3));
-        Assert.Equal("FromWriter", Assert.Single(snapshot.Configuration.Apps).Name);
+        Assert.Equal("FromWriter", Assert.Single(snapshot.Configuration.Applications).Name);
         await Task.Delay(1000);
         Assert.False(writerReloaded.Task.IsCompleted);
     }

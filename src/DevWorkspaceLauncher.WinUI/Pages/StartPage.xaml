@@ -25,7 +25,7 @@
             Visibility="Collapsed"
             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
             TextWrapping="Wrap"
-            Text="No favorites yet. Pin items on the All items, Activities, Apps or RDP sessions tab to show them here and in the tray menu." />
+            Text="No favorites yet. Pin items on the All items, Activities, Actions, RDP sessions or SSH hosts tab to show them here and in the tray menu." />
 
         <GridView x:Name="Tiles" Grid.Row="1" SelectionMode="None" IsItemClickEnabled="True" ItemClick="Tiles_ItemClick"
                   CanDragItems="True" CanReorderItems="True" AllowDrop="True" DragItemsCompleted="Tiles_DragItemsCompleted">

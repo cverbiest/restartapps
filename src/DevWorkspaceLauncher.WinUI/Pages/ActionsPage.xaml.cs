@@ -6,25 +6,26 @@ using Microsoft.UI.Xaml.Navigation;
 namespace DevWorkspaceLauncher.WinUI.Pages;
 
 /// <summary>
-/// The app definitions: add, edit, delete (or drop files on the window), start, stop and restart the
-/// selected ones, pin, add to an activity.
+/// The actions: applications (add, edit, delete, or drop files on the window; start, stop, restart) and
+/// the built-in actions (run). Pin either, or add them to an activity.
 /// </summary>
-public sealed partial class AppsPage : Page
+public sealed partial class ActionsPage : Page
 {
-    private readonly ColumnSort<AppItem> _sort;
+    private readonly ColumnSort<ActionItem> _sort;
 
     private static AppState State => App.State;
 
-    public AppsPage()
+    public ActionsPage()
     {
         InitializeComponent();
         ItemActions.AttachActivityMenu(ActivityMenu, () => XamlRoot, () => Selected().Cast<object>().ToList());
-        _sort = new ColumnSort<AppItem>(Refresh,
-            (FavHeader, item => item.App.Favorite ? 0 : 1),
+        _sort = new ColumnSort<ActionItem>(Refresh,
+            (FavHeader, item => item.Target.Favorite ? 0 : 1),
             (NameHeader, item => item.Name),
-            (CommandHeader, item => item.Commandline),
+            (KindHeader, item => item.Kind),
+            (DetailsHeader, item => item.Details),
             (StopHeader, item => item.StopMethod),
-            (StatusHeader, item => item.Running ? 0 : item.App.Disabled ? 2 : 1));
+            (StatusHeader, item => item.Running ? 0 : item.Disabled ? 2 : 1));
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -56,87 +57,119 @@ public sealed partial class AppsPage : Page
     {
         // Saving (a pin, an edit) refreshes the list; keep the selection across it.
         var selected = Selected().ToHashSet();
-        var items = _sort.Apply(State.Config.Apps
-            .Where(app => ItemActions.Matches(Search.Text, app.Name, app.Commandline))
-            .Select(app => new AppItem(app, !app.Disabled && AppController.IsRunning(app))))
+        var items = _sort.Apply(State.Config.Actions
+            .Select(action => new ActionItem(action, action is ApplicationAction { Disabled: false } app && AppController.IsRunning(app)))
+            .Where(item => ItemActions.Matches(Search.Text, item.Name, item.Kind, item.Details)))
             .ToList();
         List.ItemsSource = items;
-        foreach (var item in items.Where(item => selected.Contains(item.App)))
+        foreach (var item in items.Where(item => selected.Contains(item.Target)))
         {
             List.SelectedItems.Add(item);
         }
     }
 
-    /// <summary>The selected apps; <paramref name="enabledOnly"/> leaves out the disabled ones, for the actions that run them.</summary>
-    private List<AppConfiguration> Selected(bool enabledOnly = false) =>
-        List.SelectedItems.OfType<AppItem>().Select(item => item.App).Where(app => !enabledOnly || !app.Disabled).ToList();
+    private List<ActionConfiguration> Selected() =>
+        List.SelectedItems.OfType<ActionItem>().Select(item => item.Target).ToList();
 
-    private async Task RunOnSelectedAsync(Func<IReadOnlyList<AppConfiguration>, Task> run)
+    /// <summary>The selected applications that are not disabled, for the buttons that run them.</summary>
+    private List<ApplicationAction> SelectedApplications() =>
+        Selected().OfType<ApplicationAction>().Where(app => !app.Disabled).ToList();
+
+    private async Task RunOnSelectedAsync(Func<IReadOnlyList<ApplicationAction>, Task> run, string verb)
     {
-        var selected = Selected(enabledOnly: true);
-        if (selected.Count == 0)
+        var builtIns = Selected().OfType<BuiltInAction>().ToList();
+        if (builtIns.Count > 0)
         {
-            State.LogMessage("No (enabled) app selected.");
-            return;
+            State.LogMessage($"Built-in actions cannot {verb}; {string.Join(", ", builtIns.Select(action => $"'{action.Name}'"))} skipped.");
         }
 
-        await run(selected);
+        await RunApplicationsAsync(run);
+    }
+
+    private async Task RunApplicationsAsync(Func<IReadOnlyList<ApplicationAction>, Task> run)
+    {
+        var selected = SelectedApplications();
+        if (selected.Count > 0)
+        {
+            await run(selected);
+        }
+        else if (!Selected().OfType<BuiltInAction>().Any())
+        {
+            State.LogMessage("No (enabled) action selected.");
+        }
+
         Refresh();
     }
 
-    private async void Start_Click(object sender, RoutedEventArgs e) => await RunOnSelectedAsync(State.StartAppsAsync);
+    private async void Start_Click(object sender, RoutedEventArgs e)
+    {
+        foreach (var builtIn in Selected().OfType<BuiltInAction>())
+        {
+            State.RunAction(builtIn);
+        }
 
-    private async void Stop_Click(object sender, RoutedEventArgs e) => await RunOnSelectedAsync(State.StopAppsAsync);
+        await RunApplicationsAsync(State.StartAppsAsync);
+    }
 
-    private async void Restart_Click(object sender, RoutedEventArgs e) => await RunOnSelectedAsync(State.RestartAppsAsync);
+    private async void Stop_Click(object sender, RoutedEventArgs e) => await RunOnSelectedAsync(State.StopAppsAsync, "stop");
+
+    private async void Restart_Click(object sender, RoutedEventArgs e) => await RunOnSelectedAsync(State.RestartAppsAsync, "restart");
 
     private void List_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
     {
-        if ((e.OriginalSource as FrameworkElement)?.DataContext is AppItem { App.Disabled: false } item
+        if ((e.OriginalSource as FrameworkElement)?.DataContext is ActionItem { Disabled: false } item
             && !LaunchItemsPage.IsInButton(e.OriginalSource as DependencyObject))
         {
-            State.StartOrFocusApp(item.App);
+            State.RunAction(item.Target);
         }
     }
 
     private void Favorite_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is FrameworkElement { DataContext: AppItem item })
+        if (sender is FrameworkElement { DataContext: ActionItem item })
         {
-            FavoriteOrdering.Toggle(item.App);
+            FavoriteOrdering.Toggle(item.Target);
             State.Save();
         }
     }
 
     private async void Add_Click(object sender, RoutedEventArgs e)
     {
-        var app = new AppConfiguration { Name = string.Empty, Commandline = string.Empty };
-        if (await EditAsync(app, "Add app"))
+        var app = new ApplicationAction { Name = string.Empty, Commandline = string.Empty };
+        if (await EditAsync(app, "Add application"))
         {
-            State.Config.Apps.Add(app);
+            State.Config.Actions.Add(app);
             State.Save();
-            State.LogMessage($"Added app '{app.Name}'.");
+            State.LogMessage($"Added application '{app.Name}'.");
         }
     }
 
     private async void Edit_Click(object sender, RoutedEventArgs e)
     {
-        if (Selected() is not [var app])
+        switch (Selected())
         {
-            State.LogMessage("Select one app to edit.");
-            return;
-        }
+            case [BuiltInAction builtIn]:
+                State.LogMessage($"'{builtIn.Name}' is built in; it has nothing to edit.");
+                return;
 
-        var oldName = app.Name;
-        if (await EditAsync(app, "Edit app"))
-        {
-            if (!string.Equals(oldName, app.Name, StringComparison.Ordinal))
-            {
-                ActivityOperations.RenameApp(State.Config, oldName, app.Name);
-            }
+            case [ApplicationAction app]:
+                var oldName = app.Name;
+                if (await EditAsync(app, "Edit application"))
+                {
+                    if (!string.Equals(oldName, app.Name, StringComparison.Ordinal))
+                    {
+                        ActivityOperations.RenameAction(State.Config, oldName, app.Name);
+                    }
 
-            State.Save();
-            State.LogMessage($"Updated app '{app.Name}'.");
+                    State.Save();
+                    State.LogMessage($"Updated application '{app.Name}'.");
+                }
+
+                return;
+
+            default:
+                State.LogMessage("Select one application to edit.");
+                return;
         }
     }
 
@@ -146,8 +179,8 @@ public sealed partial class AppsPage : Page
     private void EditConfig_Click(object sender, RoutedEventArgs e) =>
         ConfigFileOpener.Open(State.ConfigPath, State.LogMessage);
 
-    /// <summary>Shows the app's fields in a dialog and writes them back on OK.</summary>
-    private async Task<bool> EditAsync(AppConfiguration app, string title)
+    /// <summary>Shows the application's fields in a dialog and writes them back on OK.</summary>
+    private async Task<bool> EditAsync(ApplicationAction app, string title)
     {
         var name = new TextBox { Header = "Name", Text = app.Name };
         var commandline = new TextBox { Header = "Command line (%VARIABLES% allowed)", Text = app.Commandline };
@@ -179,10 +212,10 @@ public sealed partial class AppsPage : Page
         dialog.PrimaryButtonClick += (_, args) =>
         {
             var newName = name.Text.Trim();
-            var duplicate = State.Config.Apps.Any(other => !ReferenceEquals(other, app)
+            var duplicate = State.Config.Actions.Any(other => !ReferenceEquals(other, app)
                 && string.Equals(other.Name, newName, StringComparison.OrdinalIgnoreCase));
-            error.Text = newName.Length == 0 ? "Give the app a name."
-                : duplicate ? $"There is already an app named '{newName}'."
+            error.Text = newName.Length == 0 ? "Give the application a name."
+                : duplicate ? $"There is already an action named '{newName}'."
                 : commandline.Text.Trim().Length == 0 ? "Give the command line that starts it."
                 : (string)stopMethod.SelectedItem == nameof(StopMethod.Window) && aumid.Text.Trim().Length == 0
                     ? "Stop by Window needs the window AppUserModelID."

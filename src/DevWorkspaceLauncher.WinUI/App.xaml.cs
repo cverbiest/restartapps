@@ -87,6 +87,7 @@ public partial class App : Application
     {
         if (MainWindow is { } window)
         {
+            ((MainWindow)window).EnsureOnScreen();
             window.AppWindow.Show();
             window.Activate();
         }

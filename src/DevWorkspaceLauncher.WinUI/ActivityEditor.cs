@@ -18,12 +18,30 @@ internal static class ActivityEditor
         var rows = new StackPanel { Spacing = 4 };
         var apply = new List<Action>();
 
-        foreach (var app in activity.Apps)
+        foreach (var item in activity.Actions)
         {
-            var action = Choice(Enum.GetNames<AppAction>(), app.Action.ToString());
-            AddRow("App", app.Name, action,
-                keep: () => app.Action = Enum.Parse<AppAction>((string)action.SelectedItem),
-                remove: () => activity.Apps.Remove(app));
+            // What can be done depends on the action: an application starts, stops or restarts; a built-in
+            // action has its own verbs. One that is gone keeps what it had, so it can still be removed.
+            var target = State.Config.Actions.FirstOrDefault(candidate =>
+                string.Equals(candidate.Name, item.Name, StringComparison.OrdinalIgnoreCase));
+            var verbs = (target?.Verbs ?? [item.Action]).Select(verb => verb.ToString()).ToList();
+            if (!verbs.Contains(item.Action.ToString()))
+            {
+                verbs.Add(item.Action.ToString());
+            }
+
+            if (verbs.Count == 1)
+            {
+                AddRow(target is null ? "Missing" : ActionItem.KindOf(target), item.Name, Fixed(verbs[0]),
+                    keep: () => { },
+                    remove: () => activity.Actions.Remove(item));
+                continue;
+            }
+
+            var action = Choice([.. verbs], item.Action.ToString());
+            AddRow(target is null ? "Missing" : ActionItem.KindOf(target), item.Name, action,
+                keep: () => item.Action = Enum.Parse<ActionVerb>((string)action.SelectedItem),
+                remove: () => activity.Actions.Remove(item));
         }
 
         foreach (var workspace in activity.Workspaces)
@@ -38,21 +56,21 @@ internal static class ActivityEditor
 
         foreach (var session in activity.RdpSessions)
         {
-            AddRow("RDP session", session.Name, new TextBlock { Text = "Connect", VerticalAlignment = VerticalAlignment.Center },
+            AddRow("RDP session", session.Name, Fixed("Connect"),
                 keep: () => { },
                 remove: () => activity.RdpSessions.Remove(session));
         }
 
         foreach (var host in activity.SshHosts)
         {
-            AddRow("SSH host", host.Name, new TextBlock { Text = "Connect", VerticalAlignment = VerticalAlignment.Center },
+            AddRow("SSH host", host.Name, Fixed("Connect"),
                 keep: () => { },
                 remove: () => activity.SshHosts.Remove(host));
         }
 
         var empty = new TextBlock
         {
-            Text = "Empty. Select items on the All items, Apps, VS Code workspaces, RDP sessions or SSH hosts tab and use Add to activity.",
+            Text = "Empty. Select items on the All items, Actions, VS Code workspaces, RDP sessions or SSH hosts tab and use Add to activity.",
             TextWrapping = TextWrapping.Wrap,
             Visibility = rows.Children.Count == 0 ? Visibility.Visible : Visibility.Collapsed
         };
@@ -148,6 +166,8 @@ internal static class ActivityEditor
             });
         }
     }
+
+    private static TextBlock Fixed(string text) => new() { Text = text, VerticalAlignment = VerticalAlignment.Center };
 
     private static ComboBox Choice(string[] values, string current) =>
         new() { ItemsSource = values, SelectedItem = current, HorizontalAlignment = HorizontalAlignment.Stretch };

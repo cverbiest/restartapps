@@ -35,7 +35,7 @@ internal sealed class MainForm : KryptonForm
     private ConfigurationFile _config;
 
     /// <summary>The rows shown in the grid: the enabled apps, by reference into <see cref="_config"/>.</summary>
-    private readonly BindingList<AppConfiguration> _visible = [];
+    private readonly BindingList<ApplicationAction> _visible = [];
 
     private readonly KryptonDataGridView _grid = new();
     private readonly KryptonTextBox _txtLog = new();
@@ -75,6 +75,9 @@ internal sealed class MainForm : KryptonForm
     public MainForm(ConfigurationSnapshot snapshot, string? setupMessage = null)
     {
         _config = snapshot.Configuration;
+
+        // A file from before actions is converted (and backed up) by the WinUI app; read it as converted.
+        ActionMigration.Convert(_config);
         _lastKnownJson = snapshot.Json;
 
         Text = AppIdentity.DisplayName;
@@ -549,13 +552,13 @@ internal sealed class MainForm : KryptonForm
         _grid.Columns.Add(new KryptonDataGridViewTextBoxColumn
         {
             HeaderText = "Application",
-            DataPropertyName = nameof(AppConfiguration.Name),
+            DataPropertyName = nameof(ApplicationAction.Name),
             ReadOnly = true,
             AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
             SortMode = DataGridViewColumnSortMode.NotSortable
         });
-        _grid.Columns.Add(CreateFlagColumn("Kill", nameof(AppConfiguration.Kill)));
-        _grid.Columns.Add(CreateFlagColumn("Restart", nameof(AppConfiguration.Restart)));
+        _grid.Columns.Add(CreateFlagColumn("Kill", nameof(ApplicationAction.Kill)));
+        _grid.Columns.Add(CreateFlagColumn("Restart", nameof(ApplicationAction.Restart)));
 
         _grid.DataSource = _visible;
 
@@ -591,7 +594,7 @@ internal sealed class MainForm : KryptonForm
     {
         foreach (DataGridViewRow row in _grid.Rows)
         {
-            if (row.DataBoundItem is not AppConfiguration app)
+            if (row.DataBoundItem is not ApplicationAction app)
             {
                 continue;
             }
@@ -612,7 +615,7 @@ internal sealed class MainForm : KryptonForm
     {
         _visible.RaiseListChangedEvents = false;
         _visible.Clear();
-        foreach (var app in _config.Apps.Where(app => !app.Disabled))
+        foreach (var app in _config.Applications.Where(app => !app.Disabled))
         {
             _visible.Add(app);
         }
@@ -893,9 +896,12 @@ internal sealed class MainForm : KryptonForm
     {
         _lastKnownJson = snapshot.Json;
         _config = snapshot.Configuration;
+
+        // A file from before actions is converted (and backed up) by the WinUI app; read it as converted.
+        ActionMigration.Convert(_config);
         ApplyConfiguration();
 
-        var hidden = _config.Apps.Count - _visible.Count;
+        var hidden = _config.Applications.Count() - _visible.Count;
         var hiddenText = hidden == 0 ? string.Empty : $", {hidden} disabled";
         LogMessage($"Configuration reloaded ({_visible.Count} application(s){hiddenText}, {_config.Profiles.Count} profile(s), {_config.Activities.Count} activity(ies)).");
     }

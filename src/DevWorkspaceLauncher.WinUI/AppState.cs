@@ -4,7 +4,7 @@ namespace DevWorkspaceLauncher.WinUI;
 
 /// <summary>
 /// What the window and its pages share: the configuration, the log and the busy flag. The pages, the
-/// start page and the tray all run activities, apps and RDP sessions, so those runs live here rather
+/// start page and the tray all run activities, actions and RDP sessions, so those runs live here rather
 /// than on a page. The behaviour itself is Core's; this only wires it to the UI.
 /// </summary>
 public sealed class AppState
@@ -42,7 +42,7 @@ public sealed class AppState
 
     public event EventHandler? WindowActivated;
 
-    public IReadOnlyList<AppConfiguration> VisibleApps => Config.Apps.Where(app => !app.Disabled).ToList();
+    public IReadOnlyList<ApplicationAction> VisibleApplications => Config.Applications.Where(app => !app.Disabled).ToList();
 
     /// <summary>
     /// Loads the configuration (migrating or creating it first) and starts watching it. Call on the UI
@@ -63,7 +63,7 @@ public sealed class AppState
                 LogMessage(setupMessage);
             }
 
-            if (ConvertToActivities())
+            if (ConvertToActivities() | ConvertToActions())
             {
                 lastKnownJson = AppConfigurationStore.ToJson(Config);
             }
@@ -150,10 +150,10 @@ public sealed class AppState
         }
     }
 
-    // -------------------------------------------------------------------- apps
+    // ----------------------------------------------------------------- actions
 
     /// <summary>Starts the apps that are not running.</summary>
-    public Task StartAppsAsync(IReadOnlyList<AppConfiguration> apps) =>
+    public Task StartAppsAsync(IReadOnlyList<ApplicationAction> apps) =>
         RunBusyAsync(() =>
         {
             foreach (var app in apps)
@@ -171,7 +171,7 @@ public sealed class AppState
             return Task.CompletedTask;
         });
 
-    public Task StopAppsAsync(IReadOnlyList<AppConfiguration> apps) =>
+    public Task StopAppsAsync(IReadOnlyList<ApplicationAction> apps) =>
         RunBusyAsync(async () =>
         {
             foreach (var app in apps)
@@ -181,7 +181,7 @@ public sealed class AppState
         });
 
     /// <summary>Stops the apps, waits a second, starts them again - the same shape as an activity's Restart.</summary>
-    public Task RestartAppsAsync(IReadOnlyList<AppConfiguration> apps) =>
+    public Task RestartAppsAsync(IReadOnlyList<ApplicationAction> apps) =>
         RunBusyAsync(async () =>
         {
             foreach (var app in apps.Where(app => app.CanStop))
@@ -204,8 +204,25 @@ public sealed class AppState
             }
         });
 
-    /// <summary>The one-click app: start it, or bring it to the front when it is running.</summary>
-    public void StartOrFocusApp(AppConfiguration app)
+    /// <summary>
+    /// The one-click action: an application starts, or comes to the front when it is running; a built-in
+    /// action runs.
+    /// </summary>
+    public void RunAction(ActionConfiguration action)
+    {
+        switch (action)
+        {
+            case ApplicationAction app:
+                StartOrFocusApp(app);
+                break;
+
+            case BuiltInAction builtIn:
+                BuiltInActionRunner.Run(builtIn, LogMessage);
+                break;
+        }
+    }
+
+    private void StartOrFocusApp(ApplicationAction app)
     {
         try
         {
@@ -222,24 +239,17 @@ public sealed class AppState
     public Task RunActivityAsync(Activity activity) =>
         RunBusyAsync(async () =>
         {
-            await ActivityRunner.RunAsync(activity, Config, LogMessage);
+            await ActivityRunner.RunAsync(activity, Config, LogMessage, ConnectRdp);
             RaiseWorkspacesChanged();
         });
 
     // ------------------------------------------------------------ RDP sessions
 
-    /// <summary>Starts mstsc for a saved session. The clean-up runs on after it, while this app lives.</summary>
-    public void ConnectRdp(RdpSession session)
-    {
-        try
-        {
-            RdpLauncher.Launch(RdpResolver.Resolve(Config, session), session.Name, LogMessage);
-        }
-        catch (Exception ex)
-        {
-            LogMessage($"Could not connect to '{session.Name}': {ex.Message}");
-        }
-    }
+    /// <summary>
+    /// Starts mstsc for a saved session, with a window that shows the connection until it is made, or
+    /// why it failed. The clean-up runs on after it, while this app lives.
+    /// </summary>
+    public void ConnectRdp(RdpSession session) => RdpConnectWindow.Connect(this, session);
 
     // --------------------------------------------------------------- SSH hosts
 
@@ -340,15 +350,47 @@ public sealed class AppState
         }
     }
 
+    /// <summary>
+    /// Turns the apps of a file from before actions into application actions, once, keeping a copy of
+    /// the file first as <see cref="ConvertToActivities"/> does.
+    /// </summary>
+    private bool ConvertToActions()
+    {
+        if (!ActionMigration.IsNeeded(Config))
+        {
+            return false;
+        }
+
+        try
+        {
+            var backup = $"{ConfigPath}.{DateTime.Now:yyyyMMdd-HHmmss}.before-actions";
+            File.Copy(ConfigPath, backup, overwrite: false);
+            foreach (var message in ActionMigration.Convert(Config))
+            {
+                LogMessage(message);
+            }
+
+            LogMessage($"Kept the configuration from before the conversion as {backup}.");
+            Save();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            LogMessage($"Failed to convert apps into actions: {ex.Message}");
+            return false;
+        }
+    }
+
     private void ApplyReload(ConfigurationSnapshot snapshot)
     {
         Config = snapshot.Configuration;
         _loaded = true;
         ConvertToActivities();
+        ConvertToActions();
         ConfigurationChanged?.Invoke(this, EventArgs.Empty);
 
-        var visible = VisibleApps.Count;
-        var hidden = Config.Apps.Count - visible;
+        var visible = VisibleApplications.Count;
+        var hidden = Config.Applications.Count() - visible;
         var hiddenText = hidden == 0 ? string.Empty : $", {hidden} disabled";
         LogMessage($"Configuration reloaded ({visible} application(s){hiddenText}, {Config.Activities.Count} activity(ies), {Config.RdpSessions.Count} RDP session(s)).");
     }

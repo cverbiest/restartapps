@@ -1,7 +1,7 @@
 namespace DevWorkspaceLauncher.WinUI;
 
 /// <summary>
-/// Something that runs with one click - an activity, app or RDP session - as the start page, the All
+/// Something that runs with one click - an activity, action, RDP session or SSH host - as the start page, the All
 /// items and Activities pages and the tray menu show it.
 /// </summary>
 public sealed class LaunchItem
@@ -22,7 +22,7 @@ public sealed class LaunchItem
 
     private static AppState State => App.State;
 
-    /// <summary>The item: an <see cref="Activity"/>, <see cref="AppConfiguration"/>, <see cref="RdpSession"/> or <see cref="SshHost"/>.</summary>
+    /// <summary>The item: an <see cref="Activity"/>, <see cref="ActionConfiguration"/>, <see cref="RdpSession"/> or <see cref="SshHost"/>.</summary>
     public IFavorite Target { get; }
 
     public string Name => ItemActions.NameOf(Target);
@@ -52,10 +52,12 @@ public sealed class LaunchItem
     public static IReadOnlyList<LaunchItem> All(ConfigurationFile config) =>
     [
         .. Activities(config),
-        .. config.Apps.Where(app => !app.Disabled).Select(app => new LaunchItem(
-            app, "App", "",
-            $"Start {app.Name}, or bring it to the front when it is running.",
-            () => State.StartOrFocusApp(app))),
+        .. config.Actions.Where(action => action is not ApplicationAction { Disabled: true }).Select(action => new LaunchItem(
+            action, ActionItem.KindOf(action), ActionItem.GlyphOf(action),
+            action is BuiltInAction builtIn
+                ? builtIn.Description
+                : $"Start {action.Name}, or bring it to the front when it is running.",
+            () => State.RunAction(action))),
         .. config.RdpSessions.Select(session => new LaunchItem(
             session, "RDP session", "",
             $"Connect to {session.Host}.",
@@ -89,9 +91,9 @@ public sealed class LaunchItem
     private static string Describe(Activity activity)
     {
         var parts = new List<string>();
-        if (activity.Apps.Count > 0)
+        if (activity.Actions.Count > 0)
         {
-            parts.Add($"{activity.Apps.Count} app(s)");
+            parts.Add($"{activity.Actions.Count} action(s)");
         }
 
         if (activity.Workspaces.Count > 0)

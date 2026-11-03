@@ -7,14 +7,14 @@ public class ConfigurationTests
     {
         var json = """
         {
-          "Apps": [ { "Name": "RDP Plus", "Commandline": "rdp.exe", "Kill": true, "Restart": true } ],
+          "Actions": [ { "Name": "RDP Plus", "Commandline": "rdp.exe", "Kill": true, "Restart": true } ],
           "Profiles": []
         }
         """;
 
         var configuration = AppConfigurationStore.Parse(json);
 
-        Assert.Single(configuration.Apps);
+        Assert.Single(configuration.Applications);
         Assert.Empty(configuration.Workspaces);
         Assert.Null(configuration.VsCodeExecutable);
     }
@@ -23,8 +23,9 @@ public class ConfigurationTests
     public void Reads_the_original_bare_array_layout()
     {
         var configuration = AppConfigurationStore.Parse("""[ { "Name": "RDP Plus", "Commandline": "rdp.exe" } ]""");
+        ActionMigration.Convert(configuration);
 
-        Assert.Single(configuration.Apps);
+        Assert.Single(configuration.Applications);
         Assert.Empty(configuration.Workspaces);
     }
 
@@ -33,7 +34,7 @@ public class ConfigurationTests
     {
         var json = """
         {
-          "Apps": [],
+          "Actions": [],
           "Profiles": [],
           "Workspaces": [ { "Name": "develop (linux)", "Uri": "vscode-remote://ssh-remote%2Bhost/home/develop.code-workspace" } ],
           "VsCodeExecutable": "C:\\Program Files\\Microsoft VS Code\\Code.exe"
@@ -68,7 +69,7 @@ public class ConfigurationTests
     {
         var json = """
         {
-          "Apps": [],
+          "Actions": [],
           "Workspaces": [
             { "Name": "develop (linux)", "Uri": "vscode-remote://ssh-remote%2Bhost/develop", "WindowTitle": "develop linux*" }
           ],

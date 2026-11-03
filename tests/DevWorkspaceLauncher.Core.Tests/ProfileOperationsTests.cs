@@ -2,7 +2,7 @@ namespace DevWorkspaceLauncher.Tests;
 
 public class ProfileOperationsTests
 {
-    private static AppConfiguration App(string name, StopMethod stopMethod = StopMethod.Process) =>
+    private static ApplicationAction App(string name, StopMethod stopMethod = StopMethod.Process) =>
         new() { Name = name, Commandline = name + ".exe", Kill = true, Restart = true, StopMethod = stopMethod };
 
     [Fact]

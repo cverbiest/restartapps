@@ -3,7 +3,11 @@ namespace DevWorkspaceLauncher;
 /// <summary>Runs an activity: plans it against what is running now, then carries the plan out.</summary>
 public static class ActivityRunner
 {
-    public static async Task RunAsync(Activity activity, ConfigurationFile config, Action<string> log)
+    /// <param name="connectRdp">
+    /// Connects one RDP session, for a caller that shows the connection's progress itself. Without it the
+    /// session is launched here and a failure is only logged.
+    /// </param>
+    public static async Task RunAsync(Activity activity, ConfigurationFile config, Action<string> log, Action<RdpSession>? connectRdp = null)
     {
         log($"Running activity '{activity.Name}'...");
 
@@ -15,7 +19,7 @@ public static class ActivityRunner
                 log(note);
             }
 
-            foreach (var step in plan.Steps.Where(step => step.Kind is not (ActivityStepKind.OpenWorkspace or ActivityStepKind.ConnectRdp or ActivityStepKind.ConnectSsh)))
+            foreach (var step in plan.Steps.Where(step => step.Kind is not (ActivityStepKind.OpenWorkspace or ActivityStepKind.ConnectRdp or ActivityStepKind.ConnectSsh or ActivityStepKind.RunBuiltIn)))
             {
                 switch (step.Kind)
                 {
@@ -50,6 +54,12 @@ public static class ActivityRunner
             // The connection's clean-up (temporary .rdp file and credential) runs on after the activity.
             foreach (var step in plan.Steps.Where(step => step.Kind == ActivityStepKind.ConnectRdp))
             {
+                if (connectRdp is not null)
+                {
+                    connectRdp(step.RdpSession!);
+                    continue;
+                }
+
                 try
                 {
                     RdpLauncher.Launch(RdpResolver.Resolve(config, step.RdpSession), step.Name, log);
@@ -63,6 +73,11 @@ public static class ActivityRunner
             foreach (var step in plan.Steps.Where(step => step.Kind == ActivityStepKind.ConnectSsh))
             {
                 await SshLauncher.ConnectAsync(step.Name, config.SshClient, log);
+            }
+
+            foreach (var step in plan.Steps.Where(step => step.Kind == ActivityStepKind.RunBuiltIn))
+            {
+                BuiltInActionRunner.Run(step.BuiltIn!, log);
             }
 
             log($"Activity '{activity.Name}' complete.");

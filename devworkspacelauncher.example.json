@@ -1,6 +1,7 @@
 {
-  "Apps": [
+  "Actions": [
     {
+      "Kind": "Application",
       "Name": "RDP Plus",
       "Commandline": "\"%ProgramFiles(x86)%\\Remote Desktop Plus\\rdp.exe\" /tray",
       "Kill": true,
@@ -9,6 +10,7 @@
       "StopMethod": "Process"
     },
     {
+      "Kind": "Application",
       "Name": "ClickShare",
       "Commandline": "%LOCALAPPDATA%\\ClickShare\\ClickShare.exe",
       "Kill": true,
@@ -17,6 +19,7 @@
       "StopMethod": "Process"
     },
     {
+      "Kind": "Application",
       "Name": "Teams",
       "Commandline": "%LOCALAPPDATA%\\Microsoft\\WindowsApps\\ms-teams.exe",
       "Kill": true,
@@ -25,6 +28,7 @@
       "StopMethod": "Process"
     },
     {
+      "Kind": "Application",
       "Name": "3CX",
       "Commandline": "%LOCALAPPDATA%\\Programs\\3CXDesktopApp\\3CXDesktopApp.exe",
       "Kill": true,
@@ -33,6 +37,7 @@
       "StopMethod": "Process"
     },
     {
+      "Kind": "Application",
       "Name": "Outlook",
       "Commandline": "\"C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\chrome_proxy.exe\"  --profile-directory=\"Profile 5\" --app-id=faolnafnngnfdaknnbpnkhgohbobgegn",
       "Kill": false,
@@ -40,6 +45,12 @@
       "Disabled": false,
       "StopMethod": "Window",
       "WindowAumid": "*_crx_faolngohbobgegn*"
+    },
+    {
+      "Kind": "BuiltIn",
+      "BuiltIn": "MoveWindowsToMainDisplay",
+      "Name": "Move all windows to the main display",
+      "Favorite": true
     }
   ],
   "Profiles": [],
@@ -56,10 +67,11 @@
   "Activities": [
     {
       "Name": "Docking",
-      "Apps": [
+      "Actions": [
         { "Name": "RDP Plus", "Action": "Restart" },
         { "Name": "Teams", "Action": "Restart" },
-        { "Name": "Outlook", "Action": "Start" }
+        { "Name": "Outlook", "Action": "Start" },
+        { "Name": "Move all windows to the main display", "Action": "Run" }
       ],
       "Workspaces": [
         { "Uri": "file:///c%3A/cce/workspaces/restartapps" }
@@ -67,7 +79,7 @@
     },
     {
       "Name": "Wind down",
-      "Apps": [
+      "Actions": [
         { "Name": "Teams", "Action": "Stop" },
         { "Name": "Outlook", "Action": "Stop" }
       ]

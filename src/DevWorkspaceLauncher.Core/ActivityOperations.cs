@@ -1,8 +1,8 @@
 namespace DevWorkspaceLauncher;
 
 /// <summary>
-/// Adding items to activities, and keeping activities in step when an app or RDP session is renamed or
-/// removed - activities refer to them by name.
+/// Adding items to activities, and keeping activities in step when an action or RDP session is renamed
+/// or removed - activities refer to them by name.
 /// </summary>
 public static class ActivityOperations
 {
@@ -11,15 +11,15 @@ public static class ActivityOperations
             ? null
             : activities.FirstOrDefault(activity => string.Equals(activity.Name, name, StringComparison.OrdinalIgnoreCase));
 
-    /// <summary>Adds the app as Start. False when the activity already has it.</summary>
-    public static bool AddApp(Activity activity, string name)
+    /// <summary>Adds the action with its default verb (Start, or Run). False when the activity already has it.</summary>
+    public static bool AddAction(Activity activity, ActionConfiguration action)
     {
-        if (activity.Apps.Any(app => Same(app.Name, name)))
+        if (activity.Actions.Any(item => Same(item.Name, action.Name)))
         {
             return false;
         }
 
-        activity.Apps.Add(new ActivityApp { Name = name, Action = AppAction.Start });
+        activity.Actions.Add(new ActivityAction { Name = action.Name, Action = action.Verbs[0] });
         return true;
     }
 
@@ -83,11 +83,11 @@ public static class ActivityOperations
         config.SshHosts.RemoveAll(settings => Same(settings.Alias, alias));
     }
 
-    public static void RenameApp(ConfigurationFile config, string oldName, string newName)
+    public static void RenameAction(ConfigurationFile config, string oldName, string newName)
     {
-        foreach (var app in config.Activities.SelectMany(activity => activity.Apps).Where(app => Same(app.Name, oldName)))
+        foreach (var item in config.Activities.SelectMany(activity => activity.Actions).Where(item => Same(item.Name, oldName)))
         {
-            app.Name = newName;
+            item.Name = newName;
         }
     }
 
@@ -99,11 +99,11 @@ public static class ActivityOperations
         }
     }
 
-    public static void RemoveApp(ConfigurationFile config, string name)
+    public static void RemoveAction(ConfigurationFile config, string name)
     {
         foreach (var activity in config.Activities)
         {
-            activity.Apps.RemoveAll(app => Same(app.Name, name));
+            activity.Actions.RemoveAll(item => Same(item.Name, name));
         }
     }
 

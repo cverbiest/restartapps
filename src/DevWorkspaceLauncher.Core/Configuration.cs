@@ -9,7 +9,7 @@ public enum StopMethod
     /// <summary>Kill every process whose executable name matches the command line.</summary>
     Process,
 
-    /// <summary>Close the top-level windows matching <see cref="AppConfiguration.WindowAumid"/>.</summary>
+    /// <summary>Close the top-level windows matching <see cref="ApplicationAction.WindowAumid"/>.</summary>
     Window,
 
     /// <summary>Never stop this application.</summary>
@@ -43,48 +43,6 @@ public abstract class CaseInsensitiveEnumConverter<TEnum>(string propertyName) :
 }
 
 public sealed class StopMethodConverter() : CaseInsensitiveEnumConverter<StopMethod>("StopMethod");
-
-public sealed class AppConfiguration : IFavorite
-{
-    public required string Name { get; set; }
-
-    /// <summary>Command line exactly as stored in the file, so it may still contain %VARIABLES%.</summary>
-    public required string Commandline { get; set; }
-
-    /// <summary>Whether "Kill &amp; Start Selected" stops this app. Absent from the file means yes.</summary>
-    public bool Kill { get; set; } = true;
-
-    /// <summary>Whether this app is started, and so whether "Restart Selected" covers it.</summary>
-    public bool Restart { get; set; }
-
-    /// <summary>Hidden from the grid and ignored by every action, but kept in the file.</summary>
-    public bool Disabled { get; set; }
-
-    /// <summary>Shown on the start page and in the tray menu, where it starts the app or brings it to the front.</summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public bool Favorite { get; set; }
-
-    /// <summary>Its place among the favorites; see <see cref="IFavorite.FavoriteOrder"/>.</summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public int FavoriteOrder { get; set; }
-
-    [JsonConverter(typeof(StopMethodConverter))]
-    public StopMethod StopMethod { get; set; } = StopMethod.Process;
-
-    /// <summary>
-    /// For <see cref="StopMethod.Window"/>: the AppUserModelID of the windows to close. Supports
-    /// <c>*</c> and <c>?</c> wildcards. This is how a browser-hosted PWA is targeted without
-    /// touching the browser process it shares with every other window.
-    /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? WindowAumid { get; set; }
-
-    [JsonIgnore]
-    public string ExpandedCommandline => Environment.ExpandEnvironmentVariables(Commandline);
-
-    [JsonIgnore]
-    public bool CanStop => StopMethod != StopMethod.None;
-}
 
 /// <summary>A named set of Kill/Restart ticks.</summary>
 public sealed class Profile
@@ -139,7 +97,19 @@ public sealed class WorkspaceProfile
 
 public sealed class ConfigurationFile
 {
-    public List<AppConfiguration> Apps { get; set; } = [];
+    /// <summary>
+    /// Applications and built-in actions. Every built-in action is in this list once loaded, but only
+    /// the pinned ones and those used by an activity are written to the file; see <see cref="BuiltInActions"/>.
+    /// </summary>
+    public List<ActionConfiguration> Actions { get; set; } = [];
+
+    /// <summary>The applications among <see cref="Actions"/>.</summary>
+    [JsonIgnore]
+    public IEnumerable<ApplicationAction> Applications => Actions.OfType<ApplicationAction>();
+
+    /// <summary>The applications as files before actions had them; <see cref="ActionMigration"/> moves them into <see cref="Actions"/>.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<ApplicationAction>? Apps { get; set; }
 
     /// <summary>App profiles. The WinUI app converts them into activities (<see cref="ActivityMigration"/>).</summary>
     public List<Profile> Profiles { get; set; } = [];
@@ -235,7 +205,7 @@ public static class AppConfigurationStore
         var json = File.ReadAllText(path);
         var configuration = Parse(json);
 
-        foreach (var app in configuration.Apps)
+        foreach (var app in configuration.Applications.Concat(configuration.Apps ?? []))
         {
             // An app that can never be stopped must not show a ticked Kill box.
             if (!app.CanStop)
@@ -256,14 +226,12 @@ public static class AppConfigurationStore
         });
 
         // The original format was a bare array of applications; keep reading it.
-        if (document.RootElement.ValueKind == JsonValueKind.Array)
-        {
-            var apps = JsonSerializer.Deserialize<List<AppConfiguration>>(json, ReadOptions) ?? [];
-            return new ConfigurationFile { Apps = apps };
-        }
-
-        return JsonSerializer.Deserialize<ConfigurationFile>(json, ReadOptions)
-            ?? throw new InvalidOperationException($"Configuration file is empty: {FilePath}");
+        var configuration = document.RootElement.ValueKind == JsonValueKind.Array
+            ? new ConfigurationFile { Apps = JsonSerializer.Deserialize<List<ApplicationAction>>(json, ReadOptions) ?? [] }
+            : JsonSerializer.Deserialize<ConfigurationFile>(json, ReadOptions)
+                ?? throw new InvalidOperationException($"Configuration file is empty: {FilePath}");
+        BuiltInActions.AddMissing(configuration);
+        return configuration;
     }
 
     /// <summary>Writes the configuration back to disk and returns the JSON that was written.</summary>
@@ -274,8 +242,18 @@ public static class AppConfigurationStore
         return json;
     }
 
+    /// <summary>The file's text: everything but the built-in actions nothing uses.</summary>
     public static string ToJson(ConfigurationFile configuration)
     {
-        return JsonSerializer.Serialize(configuration, WriteOptions);
+        var actions = configuration.Actions;
+        configuration.Actions = actions.Where(action => BuiltInActions.IsKept(action, configuration)).ToList();
+        try
+        {
+            return JsonSerializer.Serialize(configuration, WriteOptions);
+        }
+        finally
+        {
+            configuration.Actions = actions;
+        }
     }
 }

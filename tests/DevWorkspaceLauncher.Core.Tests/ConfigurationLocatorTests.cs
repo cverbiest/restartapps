@@ -101,6 +101,6 @@ public class ConfigurationLocatorTests : IDisposable
         var message = AppConfigurationStore.EnsureExists(new ConfigurationLocation(target, null));
 
         Assert.Equal($"Created a new configuration at {target}.", message);
-        Assert.Empty(AppConfigurationStore.Parse(File.ReadAllText(target)).Apps);
+        Assert.Empty(AppConfigurationStore.Parse(File.ReadAllText(target)).Applications);
     }
 }

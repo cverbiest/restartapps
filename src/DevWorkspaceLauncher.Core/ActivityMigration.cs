@@ -25,14 +25,14 @@ public static class ActivityMigration
             {
                 Name = ActivityOperations.UniqueName(config.Activities, profile.Name, "profile"),
                 Favorite = profile.Favorite,
-                Apps = profile.Entries
+                Actions = profile.Entries
                     .Where(entry => entry.Kill || entry.Restart)
-                    .Select(entry => new ActivityApp
+                    .Select(entry => new ActivityAction
                     {
                         Name = entry.Name,
-                        Action = entry is { Kill: true, Restart: true } ? AppAction.Restart
-                            : entry.Kill ? AppAction.Stop
-                            : AppAction.Start
+                        Action = entry is { Kill: true, Restart: true } ? ActionVerb.Restart
+                            : entry.Kill ? ActionVerb.Stop
+                            : ActionVerb.Start
                     })
                     .ToList()
             };

@@ -10,7 +10,7 @@ public static class AppController
     /// AppUserModelID is open (a PWA has no process of its own); otherwise whether a process with the
     /// command line's executable name exists.
     /// </summary>
-    public static bool IsRunning(AppConfiguration app)
+    public static bool IsRunning(ApplicationAction app)
     {
         if (app.StopMethod == StopMethod.Window)
         {
@@ -36,7 +36,7 @@ public static class AppController
     /// Stops the apps ticked Kill (or, with <paramref name="stopOnlySelected"/>, the ones ticked Restart),
     /// waits a second, then starts the ones ticked Restart.
     /// </summary>
-    public static async Task KillAndStartAsync(IReadOnlyList<AppConfiguration> visibleApps, bool stopOnlySelected, Action<string> log)
+    public static async Task KillAndStartAsync(IReadOnlyList<ApplicationAction> visibleApps, bool stopOnlySelected, Action<string> log)
     {
         var appsToStart = visibleApps.Where(app => app.Restart).ToList();
         var appsToStop = stopOnlySelected
@@ -89,7 +89,7 @@ public static class AppController
         }
     }
 
-    public static async Task StopAsync(AppConfiguration app, Action<string> log)
+    public static async Task StopAsync(ApplicationAction app, Action<string> log)
     {
         switch (app.StopMethod)
         {
@@ -119,7 +119,7 @@ public static class AppController
     /// The one-click app: brings its window to the front when it is running, starts it otherwise.
     /// Never stops anything.
     /// </summary>
-    public static void StartOrFocus(AppConfiguration app, Action<string> log)
+    public static void StartOrFocus(ApplicationAction app, Action<string> log)
     {
         if (!IsRunning(app))
         {
@@ -140,7 +140,7 @@ public static class AppController
         WindowFinder.BringToFront(windows[0].Handle);
     }
 
-    public static void Start(AppConfiguration app, Action<string> log)
+    public static void Start(ApplicationAction app, Action<string> log)
     {
         log($"Starting {app.Name}...");
         try
@@ -157,7 +157,7 @@ public static class AppController
     /// Closes the windows matching the app's AppUserModelID. Used for browser-hosted PWAs, which
     /// share their process with every other window of that browser.
     /// </summary>
-    private static async Task CloseWindowsAsync(AppConfiguration app, Action<string> log)
+    private static async Task CloseWindowsAsync(ApplicationAction app, Action<string> log)
     {
         if (string.IsNullOrWhiteSpace(app.WindowAumid))
         {

@@ -1,15 +1,15 @@
 namespace DevWorkspaceLauncher;
 
-/// <summary>Turns executables and shortcuts dropped on the window into configured apps.</summary>
+/// <summary>Turns executables and shortcuts dropped on the window into application actions.</summary>
 public static class DroppedApps
 {
     /// <summary>
     /// Appends an entry per dropped file to <paramref name="config"/>, skipping folders, missing files and
     /// names already present. Returns the added entries; the caller saves.
     /// </summary>
-    public static List<AppConfiguration> Add(ConfigurationFile config, IEnumerable<string> paths, Action<string> log)
+    public static List<ApplicationAction> Add(ConfigurationFile config, IEnumerable<string> paths, Action<string> log)
     {
-        var added = new List<AppConfiguration>();
+        var added = new List<ApplicationAction>();
 
         foreach (var path in paths)
         {
@@ -19,7 +19,7 @@ public static class DroppedApps
                 continue;
             }
 
-            var isDuplicate = config.Apps.Concat(added).Any(existing =>
+            var isDuplicate = config.Actions.Concat(added).Any(existing =>
                 string.Equals(existing.Name, app.Name, StringComparison.OrdinalIgnoreCase));
             if (isDuplicate)
             {
@@ -31,11 +31,11 @@ public static class DroppedApps
             log($"Added {app.Name}: {app.Commandline}");
         }
 
-        config.Apps.AddRange(added);
+        config.Actions.AddRange(added);
         return added;
     }
 
-    private static AppConfiguration? CreateEntry(string path, Action<string> log)
+    private static ApplicationAction? CreateEntry(string path, Action<string> log)
     {
         if (Directory.Exists(path))
         {
@@ -67,7 +67,7 @@ public static class DroppedApps
             }
         }
 
-        return new AppConfiguration
+        return new ApplicationAction
         {
             Name = name,
             Commandline = commandline,

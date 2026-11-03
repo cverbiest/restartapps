@@ -13,10 +13,21 @@ public static class RdpExitCode
     public const int InvalidParameters = 87;
 }
 
+/// <summary>Something the user can do about a failed launch, offered next to the message.</summary>
+public enum RdpFix
+{
+    None,
+
+    /// <summary>The credential the session refers to is missing: add it in Credential Manager.</summary>
+    OpenCredentialManager
+}
+
 /// <summary>A launch that cannot go ahead; the message is a complete line for the log.</summary>
-public sealed class RdpLaunchException(int exitCode, string message) : Exception(message)
+public sealed class RdpLaunchException(int exitCode, string message, RdpFix fix = RdpFix.None) : Exception(message)
 {
     public int ExitCode { get; } = exitCode;
+
+    public RdpFix Fix { get; } = fix;
 }
 
 /// <summary>The built-in size presets, and looking one up by name.</summary>

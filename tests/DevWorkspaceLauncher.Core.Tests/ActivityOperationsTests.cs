@@ -7,14 +7,14 @@ public class ActivityOperationsTests
     {
         var activity = new Activity { Name = "X" };
 
-        Assert.True(ActivityOperations.AddApp(activity, "Teams"));
-        Assert.False(ActivityOperations.AddApp(activity, "teams"));
+        Assert.True(ActivityOperations.AddAction(activity, new ApplicationAction { Name = "Teams", Commandline = "teams.exe" }));
+        Assert.False(ActivityOperations.AddAction(activity, new ApplicationAction { Name = "teams", Commandline = "teams.exe" }));
         Assert.True(ActivityOperations.AddWorkspace(activity, "file:///c%3A/a"));
         Assert.False(ActivityOperations.AddWorkspace(activity, "FILE:///c%3A/a"));
         Assert.True(ActivityOperations.AddRdpSession(activity, "demo"));
         Assert.False(ActivityOperations.AddRdpSession(activity, "Demo"));
 
-        Assert.Equal(AppAction.Start, Assert.Single(activity.Apps).Action);
+        Assert.Equal(ActionVerb.Start, Assert.Single(activity.Actions).Action);
         Assert.Equal(WorkspaceAction.Open, Assert.Single(activity.Workspaces).Action);
         Assert.Equal("demo", Assert.Single(activity.RdpSessions).Name);
     }
@@ -26,14 +26,14 @@ public class ActivityOperationsTests
         {
             Activities =
             [
-                new Activity { Name = "X", Apps = [new ActivityApp { Name = "Teams" }], RdpSessions = [new ActivityRdpSession { Name = "demo" }] }
+                new Activity { Name = "X", Actions = [new ActivityAction { Name = "Teams" }], RdpSessions = [new ActivityRdpSession { Name = "demo" }] }
             ]
         };
 
-        ActivityOperations.RenameApp(config, "teams", "Teams (new)");
+        ActivityOperations.RenameAction(config, "teams", "Teams (new)");
         ActivityOperations.RenameRdpSession(config, "DEMO", "demo25");
 
-        Assert.Equal("Teams (new)", config.Activities[0].Apps[0].Name);
+        Assert.Equal("Teams (new)", config.Activities[0].Actions[0].Name);
         Assert.Equal("demo25", config.Activities[0].RdpSessions[0].Name);
     }
 
@@ -44,14 +44,14 @@ public class ActivityOperationsTests
         {
             Activities =
             [
-                new Activity { Name = "X", Apps = [new ActivityApp { Name = "Teams" }], RdpSessions = [new ActivityRdpSession { Name = "demo" }] }
+                new Activity { Name = "X", Actions = [new ActivityAction { Name = "Teams" }], RdpSessions = [new ActivityRdpSession { Name = "demo" }] }
             ]
         };
 
-        ActivityOperations.RemoveApp(config, "TEAMS");
+        ActivityOperations.RemoveAction(config, "TEAMS");
         ActivityOperations.RemoveRdpSession(config, "demo");
 
-        Assert.Empty(config.Activities[0].Apps);
+        Assert.Empty(config.Activities[0].Actions);
         Assert.Empty(config.Activities[0].RdpSessions);
     }
 }

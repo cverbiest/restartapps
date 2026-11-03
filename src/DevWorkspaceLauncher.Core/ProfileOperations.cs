@@ -12,7 +12,7 @@ public static class ProfileOperations
     /// Applies the profile's ticks. An app the profile has never seen is cleared rather than acted on,
     /// so a profile always describes the whole run. Returns how many apps were cleared that way.
     /// </summary>
-    public static int Apply(Profile profile, IEnumerable<AppConfiguration> apps)
+    public static int Apply(Profile profile, IEnumerable<ApplicationAction> apps)
     {
         var entries = new Dictionary<string, ProfileEntry>(StringComparer.OrdinalIgnoreCase);
         foreach (var entry in profile.Entries)
@@ -39,7 +39,7 @@ public static class ProfileOperations
         return unknown;
     }
 
-    public static List<ProfileEntry> Capture(IEnumerable<AppConfiguration> apps) =>
+    public static List<ProfileEntry> Capture(IEnumerable<ApplicationAction> apps) =>
         apps.Select(app => new ProfileEntry { Name = app.Name, Kill = app.Kill, Restart = app.Restart }).ToList();
 
     /// <summary>Replaces the entries of the profile with this name, or adds a new profile.</summary>

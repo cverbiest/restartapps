@@ -24,7 +24,7 @@ sessions and app profiles are items in the navigation rail, the latest result sh
 the full log has its own **Activity log** page; **Settings** shows where the configuration file is.
 In the WinForms app they are rows of one-click buttons above the tabs, with the log at the bottom.
 
-The **Apps** list has one row per configured application.
+The **Apps** list has one row per configured application (in the WinUI app, the **Actions** tab).
 Two tick boxes per row control what happens, both starting from the configuration and both editable
 in place:
 
@@ -132,22 +132,36 @@ buttons, so both sets stay reachable from either tab.
 
 ### Activities
 
-An **activity** is one button for a piece of work: it starts, stops or restarts the apps linked to it
-and opens the VS Code workspaces linked to it, all in one click. Anything an activity does not list
-is left alone — unlike a profile, which clears every app it does not mention. That makes it possible
-to have buttons that only stop a few apps, next to buttons that start a whole working setup.
+An **activity** is one button for a piece of work: it runs the actions linked to it (starting,
+stopping or restarting applications, running built-in actions) and opens the VS Code workspaces
+linked to it, all in one click. Anything an activity does not list is left alone — unlike a profile,
+which clears every app it does not mention. That makes it possible to have buttons that only stop a
+few applications, next to buttons that start a whole working setup.
 
-| Item | Actions |
+| Item | What it can do |
 | --- | --- |
-| App | **Start** — only if it is not already running (for a PWA: if no window with its `WindowAumid` is open). **Stop** — by its `StopMethod`. **Restart** — stop, then start. |
+| Application action | **Start** — only if it is not already running (for a PWA: if no window with its `WindowAumid` is open). **Stop** — by its `StopMethod`. **Restart** — stop, then start. |
+| Built-in action | Depends on the action; *Move all windows to the main display* has **Run**. |
 | Workspace | **Open** — VS Code focuses it if it is already open. **Close** — asks the window to close, with the same one-matching-window rule as **Close Selected**. |
 
 A run does all the stops and closes first, waits a second if anything was stopped, then does the
-starts and opens, each in the order listed. Items that cannot be done — an app name that is not in
-`Apps`, a disabled app, stopping an app whose `StopMethod` is `None` — are logged and skipped, and the
-rest of the run goes ahead. Activity buttons act at once, without confirmation.
+starts and opens, then the RDP and SSH connections, and the built-in actions last, each in the order
+listed. Items that cannot be done — an action name that is not in `Actions`, a disabled application,
+stopping an application whose `StopMethod` is `None`, a verb the action does not have — are logged
+and skipped, and the rest of the run goes ahead. Activity buttons act at once, without confirmation.
 
-Activities are written in the configuration file (see below); there is no editor in the app yet.
+### Actions
+
+An **action** is something the launcher does with one click. There are two kinds:
+
+- **Application** — a program the launcher starts and stops (what used to be called an app).
+- **Built-in** — something the launcher does itself. *Move all windows to the main display* moves
+  every window on another monitor to the main one, keeping its size, its place relative to the
+  screen's corner and whether it is maximized; handy after undocking. Windows of programs running as
+  administrator cannot be moved unless the launcher runs as administrator too.
+
+Built-in actions are always listed on the Actions tab, but are only written to the configuration file
+while they are pinned or used by an activity.
 
 ### Live configuration reload
 
@@ -210,13 +224,16 @@ to the executable or in the current directory) is copied to the shared location 
 otherwise an empty configuration is created. The log says which happened. If an empty one was
 created while your old `restartapps.json` lives somewhere else (next to an older copy of the app,
 say), close both apps and copy that file over the shared one. Migration never overwrites an existing
-shared file. The current layout is an object with `Apps`, `Profiles` and `Workspaces`; a bare array of applications (the original
-format) is still read and is upgraded to the new layout the next time the file is saved.
+shared file. The current layout is an object with `Actions`, `Activities`, `Workspaces` and more.
+Older layouts are still read: a file with `Apps` instead of `Actions` (and activities with `Apps`) is
+converted once by the WinUI app, which keeps a copy of the old file next to it
+(`*.before-actions`); a bare array of applications (the original format) is converted the same way.
 
 ```json
 {
-  "Apps": [
+  "Actions": [
     {
+      "Kind": "Application",
       "Name": "RDP Plus",
       "Commandline": "\"%ProgramFiles(x86)%\\Remote Desktop Plus\\rdp.exe\" /tray",
       "Kill": true,
@@ -225,12 +242,19 @@ format) is still read and is upgraded to the new layout the next time the file i
       "StopMethod": "Process"
     },
     {
+      "Kind": "Application",
       "Name": "Teams",
       "Commandline": "%LOCALAPPDATA%\\Microsoft\\WindowsApps\\ms-teams.exe",
       "Kill": false,
       "Restart": false,
       "Disabled": false,
       "StopMethod": "None"
+    },
+    {
+      "Kind": "BuiltIn",
+      "BuiltIn": "MoveWindowsToMainDisplay",
+      "Name": "Move all windows to the main display",
+      "Favorite": true
     }
   ],
   "Profiles": [
@@ -247,7 +271,10 @@ format) is still read and is upgraded to the new layout the next time the file i
 
 | Field | Meaning |
 | --- | --- |
-| `Name` | Label shown in the grid. |
+| `Kind` | `Application` or `BuiltIn`. Optional — an entry without it is an application. Case-insensitive. |
+| `Name` | Label shown in the grid. Activities refer to the action by this name. |
+| `BuiltIn` | Only for `Kind: "BuiltIn"`: which built-in action — `MoveWindowsToMainDisplay`. |
+| `Favorite` | `true` puts the action on the start page and in the tray menu. |
 | `Commandline` | Command used to start the app. Quote the executable if the path contains spaces; arguments follow it. Environment variables are expanded. |
 | `Kill` | Whether `Kill` is ticked when the window opens. Optional — **omitting it means `true`**, so configurations written before this field existed keep stopping everything. Forced to `false` when `StopMethod` is `None`. |
 | `Restart` | Whether `Restart` is ticked when the window opens. |
@@ -255,7 +282,8 @@ format) is still read and is upgraded to the new layout the next time the file i
 | `StopMethod` | How the app is stopped: `Process` (default — kill by executable name), `Window` (close windows matching `WindowAumid`), or `None` (**never stopped**; its Kill box is shown locked). Case-insensitive. |
 | `WindowAumid` | Only for `StopMethod: "Window"`: the AppUserModelID of the windows to close, with `*` and `?` wildcards. See the PWA section above. |
 
-Every field except `Name` and `Commandline` is optional. The `Profiles` list may be omitted or empty.
+For an application, every field except `Name` and `Commandline` is optional. The `Profiles` list may
+be omitted or empty.
 
 | Profile field | Meaning |
 | --- | --- |
@@ -292,22 +320,23 @@ Activities live in `Activities`:
   "Activities": [
     {
       "Name": "Docking",
-      "Apps": [
+      "Actions": [
         { "Name": "RDP Plus", "Action": "Restart" },
-        { "Name": "Outlook" }
+        { "Name": "Outlook" },
+        { "Name": "Move all windows to the main display", "Action": "Run" }
       ],
       "Workspaces": [
         { "Uri": "vscode-remote://ssh-remote%2Bcce-dev03/home/cvb/develop/develop.code-workspace" }
       ]
     },
-    { "Name": "Wind down", "Apps": [ { "Name": "Teams", "Action": "Stop" } ] }
+    { "Name": "Wind down", "Actions": [ { "Name": "Teams", "Action": "Stop" } ] }
   ]
 ```
 
 | Activity field | Meaning |
 | --- | --- |
 | `Name` | Shown on the activity's button. |
-| `Apps` | Optional. Each entry names an app from `Apps` (case-insensitive) and an `Action`: `Start` (default), `Stop` or `Restart`. |
+| `Actions` | Optional. Each entry names an action from `Actions` (case-insensitive) and an `Action`: for an application `Start` (default), `Stop` or `Restart`; for a built-in action `Run`. |
 | `Workspaces` | Optional. Each entry has a workspace `Uri` and an `Action`: `Open` (default) or `Close`. The URI need not be on the preferred list; its `Name` and `WindowTitle` are used when it is. |
 
 Actions are case-insensitive.

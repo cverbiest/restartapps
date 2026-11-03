@@ -200,7 +200,8 @@ public static class RdpLauncher
         {
             credential = CredentialStore.ReadGeneric(target)
                 ?? throw new RdpLaunchException(RdpExitCode.ProfileNotFound,
-                    $"No credential '{target}' in Windows Credential Manager. Add it as a generic credential.");
+                    $"No credential '{target}' in Windows Credential Manager. Add it as a generic credential.",
+                    RdpFix.OpenCredentialManager);
             settings.Username = RdpFileWriter.Username(settings, credential.UserName);
             settings.Domain = null;
         }
@@ -254,6 +255,51 @@ public static class RdpLauncher
         }
 
         return (mstsc, cleanup);
+    }
+
+    /// <summary>
+    /// Waits until the session is connected - mstsc keeps its session window hidden until then, showing
+    /// only its progress, credential and error dialogs. Ends early when mstsc shows its error, as it does
+    /// when the computer cannot be reached, or exits, as it does when the user cancels.
+    /// </summary>
+    public static async Task<RdpConnectOutcome> WaitForConnectionAsync(Process mstsc, CancellationToken cancellation = default)
+    {
+        while (!mstsc.HasExited)
+        {
+            if (SessionWindow.IsShown(mstsc.Id))
+            {
+                return RdpConnectOutcome.Connected;
+            }
+
+            if (SessionWindow.IsShowingError(mstsc.Id))
+            {
+                return RdpConnectOutcome.Failed;
+            }
+
+            await Task.Delay(TimeSpan.FromMilliseconds(250), cancellation).ConfigureAwait(false);
+        }
+
+        return RdpConnectOutcome.Exited;
+    }
+
+    /// <summary>Ends an mstsc that failed to connect and is still showing its error.</summary>
+    public static void Dismiss(Process mstsc)
+    {
+        try
+        {
+            if (!mstsc.HasExited && !SessionWindow.IsShown(mstsc.Id))
+            {
+                mstsc.Kill();
+            }
+        }
+        catch (InvalidOperationException)
+        {
+            // Exited meanwhile.
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            // Exiting already.
+        }
     }
 
     /// <summary>
@@ -334,16 +380,34 @@ public static class RdpCommand
         args.Any(arg => string.Equals(arg, "/batch", StringComparison.OrdinalIgnoreCase));
 }
 
+/// <summary>How waiting for an mstsc connection ended.</summary>
+public enum RdpConnectOutcome
+{
+    /// <summary>The session window is shown.</summary>
+    Connected,
+
+    /// <summary>mstsc shows its error and waits for the user to dismiss it.</summary>
+    Failed,
+
+    /// <summary>mstsc exited without connecting.</summary>
+    Exited
+}
+
 /// <summary>The main window of an mstsc process.</summary>
 internal static class SessionWindow
 {
     /// <summary>The window class of mstsc's session window, whether connecting, windowed or full screen.</summary>
     private const string ShellClass = "TscShellContainerClass";
 
+    private const string DialogClass = "#32770";
+
     private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 
     [DllImport("user32.dll")]
     private static extern bool EnumWindows(EnumWindowsProc callback, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    private static extern bool EnumChildWindows(IntPtr parent, EnumWindowsProc callback, IntPtr lParam);
 
     [DllImport("user32.dll")]
     private static extern int GetWindowThreadProcessId(IntPtr hWnd, out int processId);
@@ -357,6 +421,41 @@ internal static class SessionWindow
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     private static extern bool SetWindowText(IntPtr hWnd, string text);
 
+    [DllImport("user32.dll")]
+    private static extern bool IsWindowVisible(IntPtr hWnd);
+
+    /// <summary>Whether the session window is visible, which it is once the connection is made.</summary>
+    public static bool IsShown(int processId) => Find(processId, ShellClass).Any(IsWindowVisible);
+
+    /// <summary>
+    /// Whether mstsc shows its connection error: a task dialog with a single button, OK. Its progress
+    /// dialog is a classic dialog with a Cancel button, and its warnings ask a question with two or more.
+    /// </summary>
+    public static bool IsShowingError(int processId) =>
+        Find(processId, DialogClass).Any(dialog =>
+        {
+            if (!IsWindowVisible(dialog))
+            {
+                return false;
+            }
+
+            var taskDialog = false;
+            var buttons = 0;
+            EnumChildWindows(dialog, (child, _) =>
+            {
+                var name = ClassName(child);
+                taskDialog |= name == "DirectUIHWND";
+                if (name == "Button" && IsWindowVisible(child))
+                {
+                    buttons++;
+                }
+
+                return true;
+            }, IntPtr.Zero);
+
+            return taskDialog && buttons == 1;
+        });
+
     /// <summary>
     /// Sets the session window's title, and sets it again whenever mstsc changes it back - it does on
     /// connecting and reconnecting - until mstsc exits.
@@ -365,7 +464,7 @@ internal static class SessionWindow
     {
         while (!mstsc.HasExited)
         {
-            foreach (var window in Find(mstsc.Id))
+            foreach (var window in Find(mstsc.Id, ShellClass))
             {
                 var current = new System.Text.StringBuilder(512);
                 GetWindowText(window, current, current.Capacity);
@@ -379,25 +478,28 @@ internal static class SessionWindow
         }
     }
 
-    private static List<IntPtr> Find(int processId)
+    /// <summary>The top-level windows of <paramref name="processId"/> with window class <paramref name="className"/>.</summary>
+    private static List<IntPtr> Find(int processId, string className)
     {
         var found = new List<IntPtr>();
         EnumWindows((window, _) =>
         {
             GetWindowThreadProcessId(window, out var owner);
-            if (owner == processId)
+            if (owner == processId && ClassName(window) == className)
             {
-                var name = new System.Text.StringBuilder(64);
-                GetClassName(window, name, name.Capacity);
-                if (name.ToString() == ShellClass)
-                {
-                    found.Add(window);
-                }
+                found.Add(window);
             }
 
             return true;
         }, IntPtr.Zero);
 
         return found;
+    }
+
+    private static string ClassName(IntPtr window)
+    {
+        var name = new System.Text.StringBuilder(64);
+        GetClassName(window, name, name.Capacity);
+        return name.ToString();
     }
 }

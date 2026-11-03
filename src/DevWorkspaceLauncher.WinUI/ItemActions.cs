@@ -5,7 +5,7 @@ namespace DevWorkspaceLauncher.WinUI;
 
 /// <summary>
 /// What every grid offers on its selected rows - quick search, delete, add to activity - for whatever
-/// the rows are: an <see cref="Activity"/>, <see cref="AppConfiguration"/>, <see cref="RdpSession"/>,
+/// the rows are: an <see cref="Activity"/>, <see cref="ActionConfiguration"/>, <see cref="RdpSession"/>,
 /// <see cref="SshHost"/> or <see cref="WorkspaceRow"/>.
 /// </summary>
 internal static class ItemActions
@@ -20,7 +20,7 @@ internal static class ItemActions
     public static string NameOf(object item) => item switch
     {
         Activity activity => activity.Name,
-        AppConfiguration app => app.Name,
+        ActionConfiguration action => action.Name,
         RdpSession session => session.Name,
         SshHost host => host.Alias,
         WorkspaceRow row => row.Name,
@@ -28,8 +28,9 @@ internal static class ItemActions
     };
 
     /// <summary>
-    /// Asks, then deletes the items. Apps and RDP sessions also leave the activities that use them; a
-    /// workspace leaves the preferred list (VS Code's own recent list is not ours to change).
+    /// Asks, then deletes the items. Actions and RDP sessions also leave the activities that use them; a
+    /// workspace leaves the preferred list (VS Code's own recent list is not ours to change). Built-in
+    /// actions cannot be deleted.
     /// </summary>
     public static async Task DeleteAsync(XamlRoot root, IReadOnlyList<object> items)
     {
@@ -37,6 +38,16 @@ internal static class ItemActions
         {
             State.LogMessage("Nothing selected.");
             return;
+        }
+
+        if (items.Any(item => item is BuiltInAction))
+        {
+            State.LogMessage("Built-in actions cannot be deleted; unpin them or take them out of their activities instead.");
+            items = items.Where(item => item is not BuiltInAction).ToList();
+            if (items.Count == 0)
+            {
+                return;
+            }
         }
 
         var workspaces = items.OfType<WorkspaceRow>().ToList();
@@ -48,8 +59,8 @@ internal static class ItemActions
 
         var names = string.Join(", ", items.Take(10).Select(item => $"'{NameOf(item)}'"))
             + (items.Count > 10 ? $" and {items.Count - 10} more" : string.Empty);
-        var usedIn = items.Any(item => item is AppConfiguration or RdpSession or SshHost)
-            ? " Apps, RDP sessions and SSH hosts are also taken out of the activities that use them."
+        var usedIn = items.Any(item => item is ApplicationAction or RdpSession or SshHost)
+            ? " Actions, RDP sessions and SSH hosts are also taken out of the activities that use them."
             : string.Empty;
         var sshHosts = items.OfType<SshHost>().ToList();
         var fromFile = sshHosts.Count > 0 ? $" SSH hosts are removed from {State.SshConfigPath}." : string.Empty;
@@ -79,9 +90,9 @@ internal static class ItemActions
                     config.Activities.Remove(activity);
                     break;
 
-                case AppConfiguration app:
-                    config.Apps.Remove(app);
-                    ActivityOperations.RemoveApp(config, app.Name);
+                case ApplicationAction app:
+                    config.Actions.Remove(app);
+                    ActivityOperations.RemoveAction(config, app.Name);
                     break;
 
                 case RdpSession session:
@@ -161,7 +172,7 @@ internal static class ItemActions
         {
             switch (item)
             {
-                case AppConfiguration app when ActivityOperations.AddApp(activity, app.Name):
+                case ActionConfiguration action when ActivityOperations.AddAction(activity, action):
                 case RdpSession session when ActivityOperations.AddRdpSession(activity, session.Name):
                 case SshHost host when ActivityOperations.AddSshHost(activity, host.Alias):
                 case WorkspaceRow row when ActivityOperations.AddWorkspace(activity, row.Uri):

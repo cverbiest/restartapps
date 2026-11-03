@@ -8,20 +8,23 @@ public enum ActivityStepKind
     StartApp,
     OpenWorkspace,
     ConnectRdp,
-    ConnectSsh
+    ConnectSsh,
+    RunBuiltIn
 }
 
 /// <summary>
-/// One thing a run does. <see cref="App"/> is set for app steps, <see cref="Uri"/> for workspace steps,
-/// <see cref="RdpSession"/> for RDP steps; an SSH step's <see cref="Name"/> is the host's alias.
+/// One thing a run does. <see cref="App"/> is set for application steps, <see cref="Uri"/> for workspace
+/// steps, <see cref="RdpSession"/> for RDP steps, <see cref="BuiltIn"/> for built-in actions; an SSH
+/// step's <see cref="Name"/> is the host's alias.
 /// </summary>
 public sealed record ActivityStep(
     ActivityStepKind Kind,
     string Name,
-    AppConfiguration? App = null,
+    ApplicationAction? App = null,
     string? Uri = null,
     string? WindowTitle = null,
-    RdpSession? RdpSession = null);
+    RdpSession? RdpSession = null,
+    BuiltInAction? BuiltIn = null);
 
 /// <summary>The steps of a run, in order, and the lines to log about items that were skipped.</summary>
 public sealed record ActivityPlan(IReadOnlyList<ActivityStep> Steps, IReadOnlyList<string> Notes);
@@ -30,8 +33,9 @@ public sealed record ActivityPlan(IReadOnlyList<ActivityStep> Steps, IReadOnlyLi
 /// Decides what running an activity does, without doing any of it, so the rules can be tested.
 /// <para>
 /// Order: every stop and close first, a pause if anything was stopped, then every start and open, then
-/// the RDP connections, then the SSH connections, each group in the order the activity lists them - the
-/// same shape as Kill &amp;&amp; Start.
+/// the RDP connections, then the SSH connections, then the built-in actions, each group in the order the
+/// activity lists them - the same shape as Kill &amp;&amp; Start. Built-in actions come last so that, say,
+/// moving windows also moves the ones the activity opened.
 /// </para>
 /// </summary>
 public static class ActivityPlanner
@@ -40,7 +44,7 @@ public static class ActivityPlanner
     public static ActivityPlan Plan(
         Activity activity,
         ConfigurationFile config,
-        Func<AppConfiguration, bool> isRunning,
+        Func<ApplicationAction, bool> isRunning,
         IReadOnlyCollection<string>? sshAliases = null)
     {
         var stops = new List<ActivityStep>();
@@ -48,19 +52,33 @@ public static class ActivityPlanner
         var starts = new List<ActivityStep>();
         var opens = new List<ActivityStep>();
         var connects = new List<ActivityStep>();
+        var builtIns = new List<ActivityStep>();
         var notes = new List<string>();
 
-        foreach (var item in activity.Apps)
+        foreach (var item in activity.Actions)
         {
-            var app = config.Apps.FirstOrDefault(candidate =>
+            var action = config.Actions.FirstOrDefault(candidate =>
                 string.Equals(candidate.Name, item.Name, StringComparison.OrdinalIgnoreCase));
 
-            if (app is null)
+            if (action is null)
             {
-                notes.Add($"No app named '{item.Name}'; skipped.");
+                notes.Add($"No action named '{item.Name}'; skipped.");
                 continue;
             }
 
+            if (!action.Verbs.Contains(item.Action))
+            {
+                notes.Add($"{action.Name} cannot {item.Action}; skipped.");
+                continue;
+            }
+
+            if (action is BuiltInAction builtIn)
+            {
+                builtIns.Add(new ActivityStep(ActivityStepKind.RunBuiltIn, builtIn.Name, BuiltIn: builtIn));
+                continue;
+            }
+
+            var app = (ApplicationAction)action;
             if (app.Disabled)
             {
                 notes.Add($"{app.Name} is disabled; skipped.");
@@ -69,20 +87,20 @@ public static class ActivityPlanner
 
             switch (item.Action)
             {
-                case AppAction.Stop when !app.CanStop:
+                case ActionVerb.Stop when !app.CanStop:
                     notes.Add($"{app.Name} cannot be stopped (StopMethod None); skipped.");
                     break;
 
-                case AppAction.Stop:
+                case ActionVerb.Stop:
                     stops.Add(new ActivityStep(ActivityStepKind.StopApp, app.Name, App: app));
                     break;
 
-                case AppAction.Restart when app.CanStop:
+                case ActionVerb.Restart when app.CanStop:
                     stops.Add(new ActivityStep(ActivityStepKind.StopApp, app.Name, App: app));
                     starts.Add(new ActivityStep(ActivityStepKind.StartApp, app.Name, App: app));
                     break;
 
-                case AppAction.Restart:
+                case ActionVerb.Restart:
                     notes.Add($"{app.Name} cannot be stopped (StopMethod None); starting it if not running.");
                     AddStartIfNotRunning(app);
                     break;
@@ -151,6 +169,7 @@ public static class ActivityPlanner
         steps.AddRange(starts);
         steps.AddRange(opens);
         steps.AddRange(connects);
+        steps.AddRange(builtIns);
 
         if (steps.Count == 0)
         {
@@ -164,7 +183,7 @@ public static class ActivityPlanner
         static bool IsWorkspaceUri(string? uri) =>
             !string.IsNullOrWhiteSpace(uri) && uri.Contains("://", StringComparison.Ordinal);
 
-        void AddStartIfNotRunning(AppConfiguration app)
+        void AddStartIfNotRunning(ApplicationAction app)
         {
             if (isRunning(app))
             {

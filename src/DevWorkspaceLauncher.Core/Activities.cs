@@ -2,19 +2,6 @@ using System.Text.Json.Serialization;
 
 namespace DevWorkspaceLauncher;
 
-/// <summary>What an activity does to one of its apps.</summary>
-public enum AppAction
-{
-    /// <summary>Start the app, unless it is already running.</summary>
-    Start,
-
-    /// <summary>Stop the app by its <see cref="StopMethod"/>.</summary>
-    Stop,
-
-    /// <summary>Stop the app, then start it.</summary>
-    Restart
-}
-
 /// <summary>What an activity does to one of its workspaces.</summary>
 public enum WorkspaceAction
 {
@@ -25,13 +12,11 @@ public enum WorkspaceAction
     Close
 }
 
-public sealed class AppActionConverter() : CaseInsensitiveEnumConverter<AppAction>("Action");
-
 public sealed class WorkspaceActionConverter() : CaseInsensitiveEnumConverter<WorkspaceAction>("Action");
 
 /// <summary>
-/// A named one-click button that acts on a set of apps, workspaces and RDP sessions. Anything it does
-/// not list is left alone.
+/// A named one-click button that acts on a set of actions, workspaces, RDP sessions and SSH hosts.
+/// Anything it does not list is left alone.
 /// </summary>
 public sealed class Activity : IFavorite
 {
@@ -45,12 +30,16 @@ public sealed class Activity : IFavorite
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int FavoriteOrder { get; set; }
 
-    /// <summary>Never null: <c>"Apps": null</c> in the file reads as an empty list.</summary>
-    public List<ActivityApp> Apps
+    /// <summary>Never null: <c>"Actions": null</c> in the file reads as an empty list.</summary>
+    public List<ActivityAction> Actions
     {
         get;
         set => field = value ?? [];
     } = [];
+
+    /// <summary>The actions as files before actions had them; <see cref="ActionMigration"/> moves them into <see cref="Actions"/>.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<ActivityAction>? Apps { get; set; }
 
     /// <summary>Never null: <c>"Workspaces": null</c> in the file reads as an empty list.</summary>
     public List<ActivityWorkspace> Workspaces
@@ -86,13 +75,14 @@ public sealed class ActivityRdpSession
     public required string Name { get; set; }
 }
 
-public sealed class ActivityApp
+public sealed class ActivityAction
 {
-    /// <summary>The <see cref="AppConfiguration.Name"/> of the app, matched case-insensitively.</summary>
+    /// <summary>The <see cref="ActionConfiguration.Name"/> of the action, matched case-insensitively.</summary>
     public required string Name { get; set; }
 
-    [JsonConverter(typeof(AppActionConverter))]
-    public AppAction Action { get; set; } = AppAction.Start;
+    /// <summary>What is done with it; one of the action's <see cref="ActionConfiguration.Verbs"/>.</summary>
+    [JsonConverter(typeof(ActionVerbConverter))]
+    public ActionVerb Action { get; set; } = ActionVerb.Start;
 }
 
 public sealed class ActivityWorkspace

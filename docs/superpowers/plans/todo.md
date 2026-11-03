@@ -10,6 +10,16 @@ These include
   * `/title` and `/drives`, the options the RDP+ favorites use that were missing **done**
   * RDP session editor: Credential is a dropdown of the existing `DevLauncher_*` generic credentials,
     showing the username each logs in as; any other name can still be typed **done**
+  * Connecting shows a small always-on-top window that closes once the session is up; on failure it
+    shows why, with Retry and Close, plus a quick fix when there is one (missing credential: Open
+    Credential Manager) **done**
+    (at the top left of the primary monitor)
+    * Also when mstsc shows its own "can't connect" error and keeps running (computer unreachable);
+      Retry and Close also close that mstsc **done**
+  * Avoid mstsc's "Caution: Unknown remote connection" dialog (April 2026 update; shown for every
+    unsigned .rdp file) - options under discussion
+    * Sign the files: sign each generated .rdp file with a certificate the machine trusts (rdpsign,
+      "trusted .rdp publishers" policy); first test whether a trusted publisher skips the dialog
 * profiles
 * vscode workspaces
 
@@ -23,6 +33,10 @@ can be marked as favorite = on start page and tray **done** (pin on All items, A
 * some status info, e.g. current active networks : wired, wifi, vpn
 
 ## Launcher window
+
+* Remember the main window's size and position (per computer); move it to the primary monitor when
+  it is not on a connected one **done**
+* An action that moves all windows to the main display: one of the built-in actions (see "Actions") **done**
 
 * Don't list launchable items on the left (the rail); they belong on their own tabs **done**
 * Add an "All items" tab **done**
@@ -56,6 +70,14 @@ can be marked as favorite = on start page and tray **done** (pin on All items, A
 * SSH hosts are launch items: All items, start page, tray, activities **done**
 * Start them with WezTerm **done** (a tab in the host's `SSH:<alias>` domain in the running WezTerm, else a
   new WezTerm window; Windows Terminal stays a choice in Settings)
+
+## Actions
+
+* Rename apps to actions **done** (the Apps tab is now Actions; `"Apps"` in the file becomes `"Actions"`, converted once with a `.before-actions` backup)
+* The current apps become the "Application" kind of action **done**
+* Built-in actions, provided by the launcher itself; the first is "Move all windows to the main display" **done**
+  (always listed; in the file only while pinned or used by an activity; what an activity can do with one
+  depends on the action - this one has Run)
 
 ## App definitions & profiles
 
@@ -106,3 +128,13 @@ Partial: size presets exist (`RdpSizes`, built-in `fit68` and `full`) and a sess
 
 * Update it to the new configuration: after app profiles and workspace sessions became activities it
   no longer sees them (accepted for now, 2026-10-27)
+
+# Browser integration
+
+start with what's feasible
+
+* My default browser is Brave, I use multiple profiles
+* add URL as Action item, a URL should be opened using a particular profile
+* add "pin" as option to an URL
+* if possible, add option to focus on exising / open new
+* add dialog to pick from history / bookmarks

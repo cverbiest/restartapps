@@ -7,13 +7,13 @@ public class ActivityPlannerTests
 
     private readonly ConfigurationFile _config = new()
     {
-        Apps =
+        Actions =
         [
-            new AppConfiguration { Name = "A", Commandline = "a.exe" },
-            new AppConfiguration { Name = "B", Commandline = "b.exe" },
-            new AppConfiguration { Name = "P", Commandline = "brave.exe", StopMethod = StopMethod.Window, WindowAumid = "*_crx_*" },
-            new AppConfiguration { Name = "N", Commandline = "n.exe", StopMethod = StopMethod.None },
-            new AppConfiguration { Name = "D", Commandline = "d.exe", Disabled = true }
+            new ApplicationAction { Name = "A", Commandline = "a.exe" },
+            new ApplicationAction { Name = "B", Commandline = "b.exe" },
+            new ApplicationAction { Name = "P", Commandline = "brave.exe", StopMethod = StopMethod.Window, WindowAumid = "*_crx_*" },
+            new ApplicationAction { Name = "N", Commandline = "n.exe", StopMethod = StopMethod.None },
+            new ApplicationAction { Name = "D", Commandline = "d.exe", Disabled = true }
         ],
         Workspaces = [new WorkspaceFavorite { Name = "One (pinned)", Uri = U1, WindowTitle = "one*" }],
         RdpSessions = [new RdpSession { Name = "demo", Host = "demo25" }]
@@ -21,19 +21,19 @@ public class ActivityPlannerTests
 
     private readonly HashSet<string> _running = new(StringComparer.OrdinalIgnoreCase);
 
-    private ActivityPlan Plan(ActivityApp[]? apps = null, ActivityWorkspace[]? workspaces = null, string[]? rdpSessions = null) =>
+    private ActivityPlan Plan(ActivityAction[]? apps = null, ActivityWorkspace[]? workspaces = null, string[]? rdpSessions = null) =>
         ActivityPlanner.Plan(
             new Activity
             {
                 Name = "X",
-                Apps = [.. apps ?? []],
+                Actions = [.. apps ?? []],
                 Workspaces = [.. workspaces ?? []],
                 RdpSessions = [.. (rdpSessions ?? []).Select(name => new ActivityRdpSession { Name = name })]
             },
             _config,
             app => _running.Contains(app.Name));
 
-    private static ActivityApp App(string name, AppAction action) => new() { Name = name, Action = action };
+    private static ActivityAction App(string name, ActionVerb action) => new() { Name = name, Action = action };
 
     private static string[] Describe(ActivityPlan plan) =>
         plan.Steps.Select(step => step.Kind == ActivityStepKind.Wait ? "Wait" : $"{step.Kind} {step.Name}").ToArray();
@@ -41,10 +41,10 @@ public class ActivityPlannerTests
     [Fact]
     public void Restart_stops_waits_then_starts()
     {
-        var plan = Plan([App("A", AppAction.Restart)]);
+        var plan = Plan([App("A", ActionVerb.Restart)]);
 
         Assert.Equal(["StopApp A", "Wait", "StartApp A"], Describe(plan));
-        Assert.Same(_config.Apps[0], plan.Steps[0].App);
+        Assert.Same(_config.Actions[0], plan.Steps[0].App);
     }
 
     [Fact]
@@ -52,7 +52,7 @@ public class ActivityPlannerTests
     {
         _running.Add("A");
 
-        var plan = Plan([App("A", AppAction.Start)]);
+        var plan = Plan([App("A", ActionVerb.Start)]);
 
         Assert.Empty(plan.Steps);
         Assert.Equal(["A is already running.", "Nothing to do."], plan.Notes);
@@ -63,7 +63,7 @@ public class ActivityPlannerTests
     {
         _running.Add("P");
 
-        var plan = Plan([App("P", AppAction.Start)]);
+        var plan = Plan([App("P", ActionVerb.Start)]);
 
         Assert.Empty(plan.Steps);
     }
@@ -71,14 +71,14 @@ public class ActivityPlannerTests
     [Fact]
     public void Start_runs_an_app_that_is_not_running()
     {
-        Assert.Equal(["StartApp B"], Describe(Plan([App("B", AppAction.Start)])));
+        Assert.Equal(["StartApp B"], Describe(Plan([App("B", ActionVerb.Start)])));
     }
 
     [Fact]
     public void Order_is_stops_closes_wait_starts_opens()
     {
         var plan = Plan(
-            [App("B", AppAction.Start), App("A", AppAction.Stop)],
+            [App("B", ActionVerb.Start), App("A", ActionVerb.Stop)],
             [new ActivityWorkspace { Uri = U1 }, new ActivityWorkspace { Uri = U2, Action = WorkspaceAction.Close }]);
 
         Assert.Equal(["StopApp A", "CloseWorkspace two", "Wait", "StartApp B", "OpenWorkspace One (pinned)"], Describe(plan));
@@ -97,22 +97,22 @@ public class ActivityPlannerTests
     [Fact]
     public void Unknown_and_disabled_apps_are_noted_and_the_rest_runs()
     {
-        var plan = Plan([App("Gone", AppAction.Start), App("D", AppAction.Start), App("B", AppAction.Start)]);
+        var plan = Plan([App("Gone", ActionVerb.Start), App("D", ActionVerb.Start), App("B", ActionVerb.Start)]);
 
         Assert.Equal(["StartApp B"], Describe(plan));
-        Assert.Equal(["No app named 'Gone'; skipped.", "D is disabled; skipped."], plan.Notes);
+        Assert.Equal(["No action named 'Gone'; skipped.", "D is disabled; skipped."], plan.Notes);
     }
 
     [Fact]
     public void App_names_match_case_insensitively()
     {
-        Assert.Equal(["StartApp B"], Describe(Plan([App("b", AppAction.Start)])));
+        Assert.Equal(["StartApp B"], Describe(Plan([App("b", ActionVerb.Start)])));
     }
 
     [Fact]
     public void Stop_on_StopMethod_None_is_noted()
     {
-        var plan = Plan([App("N", AppAction.Stop)]);
+        var plan = Plan([App("N", ActionVerb.Stop)]);
 
         Assert.Empty(plan.Steps);
         Assert.Equal(["N cannot be stopped (StopMethod None); skipped.", "Nothing to do."], plan.Notes);
@@ -121,13 +121,13 @@ public class ActivityPlannerTests
     [Fact]
     public void Restart_on_StopMethod_None_starts_if_not_running()
     {
-        var plan = Plan([App("N", AppAction.Restart)]);
+        var plan = Plan([App("N", ActionVerb.Restart)]);
 
         Assert.Equal(["StartApp N"], Describe(plan));
         Assert.Equal(["N cannot be stopped (StopMethod None); starting it if not running."], plan.Notes);
 
         _running.Add("N");
-        Assert.Empty(Plan([App("N", AppAction.Restart)]).Steps);
+        Assert.Empty(Plan([App("N", ActionVerb.Restart)]).Steps);
     }
 
     [Fact]
@@ -172,7 +172,7 @@ public class ActivityPlannerTests
     [Fact]
     public void Rdp_sessions_connect_last()
     {
-        var plan = Plan(apps: [App("A", AppAction.Start)], workspaces: [new ActivityWorkspace { Uri = U2 }], rdpSessions: ["DEMO"]);
+        var plan = Plan(apps: [App("A", ActionVerb.Start)], workspaces: [new ActivityWorkspace { Uri = U2 }], rdpSessions: ["DEMO"]);
 
         Assert.Equal(["StartApp A", "OpenWorkspace two", "ConnectRdp demo"], Describe(plan));
         Assert.Same(_config.RdpSessions[0], plan.Steps[2].RdpSession);
