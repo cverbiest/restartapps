@@ -17,9 +17,12 @@ These include
     * Also when mstsc shows its own "can't connect" error and keeps running (computer unreachable);
       Retry and Close also close that mstsc **done**
   * Avoid mstsc's "Caution: Unknown remote connection" dialog (April 2026 update; shown for every
-    unsigned .rdp file) - options under discussion
+    unsigned .rdp file, with every redirection unchecked) **done**
     * Sign the files: sign each generated .rdp file with a certificate the machine trusts (rdpsign,
-      "trusted .rdp publishers" policy); first test whether a trusted publisher skips the dialog
+      "trusted .rdp publishers" policy); tested: a trusted publisher skips the dialog **done**
+      (`RdpSigningCertificate` in the configuration; setup steps in the README)
+    * Clipboard shared by default (`redirectclipboard:i:1`) **done**
+    * Later: set up the certificate from the app (create it, show the thumbprint for the policy)
 * profiles
 * vscode workspaces
 

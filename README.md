@@ -217,14 +217,15 @@ refuse. Nothing is force-killed by this method.
 
 ## Configuration
 
-The configuration is `%APPDATA%\DevWorkspaceLauncher\devworkspacelauncher.json`, shared by every
-copy of the app. A `devworkspacelauncher.json` next to the executable takes precedence, for a
-portable copy. On first start, if neither exists, a `restartapps.json` from before the rename (next
-to the executable or in the current directory) is copied to the shared location and left in place;
+The configuration is `%APPDATA%\DevWorkspaceLauncher\devworkspacelauncher.json`, used by every
+copy of the app on this PC; it is not shared with other PCs. A `devworkspacelauncher.json` next to
+the executable takes precedence, for a portable copy. On first start, if neither exists, a `restartapps.json` from before the rename (next
+to the executable or in the current directory) is copied to that location and left in place;
 otherwise an empty configuration is created. The log says which happened. If an empty one was
 created while your old `restartapps.json` lives somewhere else (next to an older copy of the app,
-say), close both apps and copy that file over the shared one. Migration never overwrites an existing
-shared file. The current layout is an object with `Actions`, `Activities`, `Workspaces` and more.
+say), close both apps and copy that file over the one in `%APPDATA%`. Migration never overwrites an
+existing file there. The current layout is an object with `Actions`, `Activities`, `Workspaces`
+and more.
 Older layouts are still read: a file with `Apps` instead of `Actions` (and activities with `Apps`) is
 converted once by the WinUI app, which keeps a copy of the old file next to it
 (`*.before-actions`); a bare array of applications (the original format) is converted the same way.
@@ -344,6 +345,24 @@ Actions are case-insensitive.
 Add `"VsCodeExecutable": "..."` at the top level if VS Code is not in one of the usual places;
 otherwise `%LOCALAPPDATA%\Programs\Microsoft VS Code`, `%ProgramFiles%\Microsoft VS Code` and
 `code.cmd` on `PATH` are tried in that order.
+
+Add `"RdpSigningCertificate": "<thumbprint>"` at the top level to sign every `.rdp` file the
+launcher generates. Since the April 2026 Windows update, mstsc shows "Caution: Unknown remote
+connection" for every unsigned file, with all redirections (the clipboard too) unchecked. A file
+signed by a trusted publisher connects without that dialog, with the redirections it asks for. The
+clipboard is asked for unless an option or base file says `redirectclipboard:i:0`. Setting it up
+once:
+
+1. A code-signing certificate in the user's store, for example
+   `New-SelfSignedCertificate -Subject "CN=Developer Workspace Launcher" -Type CodeSigningCert -CertStoreLocation Cert:\CurrentUser\My -KeyExportPolicy NonExportable -NotAfter (Get-Date).AddYears(5)`.
+2. Windows must trust it: for a self-signed one, import its public part (`Export-Certificate`) into
+   `Cert:\LocalMachine\Root` (admin). A certificate from a CA the machine trusts needs nothing here.
+3. Its thumbprint in the policy "Specify SHA1 thumbprints of certificates representing trusted .rdp
+   publishers" (GPO, or the `TrustedCertThumbprints` value under
+   `HKLM\Software\Policies\Microsoft\Windows NT\Terminal Services`, admin).
+
+Signing is done with `rdpsign`; when it fails, the reason is logged and the session still connects,
+with mstsc's warning.
 
 Comments and trailing commas are tolerated. `devworkspacelauncher.example.json` in this repository
 is an example to copy from.

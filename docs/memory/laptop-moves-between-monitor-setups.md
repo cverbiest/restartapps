@@ -13,3 +13,5 @@ computers"; the user corrected that.
 
 **How to apply:** for anything tied to screens (window positions, RDP monitor choice), expect monitors to
 appear and disappear between runs and while the app is in the tray; don't argue from config sharing.
+Settings that belong to one machine (such as `RdpSigningCertificate`, a thumbprint per PC) can go in the
+config file; don't warn about copying the config to other PCs (corrected again 2026-11-11).

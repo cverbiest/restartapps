@@ -90,8 +90,8 @@ public static class RdpLayout
 public static class RdpFileWriter
 {
     /// <summary>
-    /// The base file's lines, then the raw options, then what the launcher sets itself - later lines win
-    /// by key. Every setting the launcher depends on is written explicitly, so nothing mstsc remembered
+    /// The launcher's defaults, then the base file's lines, then the raw options, then what the launcher
+    /// sets itself - later lines win by key. Every setting the launcher depends on is written explicitly, so nothing mstsc remembered
     /// from an earlier session leaks in. The password is never written.
     /// </summary>
     public static string Build(RdpSettings settings, RdpGeometry geometry, string? baseFileText = null)
@@ -109,6 +109,9 @@ public static class RdpFileWriter
             lines.RemoveAll(existing => string.Equals(existing.Key, key, StringComparison.OrdinalIgnoreCase));
             lines.Add((key, line));
         }
+
+        // The clipboard is shared unless the base file or an option says otherwise.
+        Set("redirectclipboard:i:1");
 
         if (baseFileText is not null)
         {

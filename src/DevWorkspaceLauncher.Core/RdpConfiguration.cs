@@ -127,6 +127,13 @@ public class RdpSettings : RdpDisplay
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Drives { get; set; }
 
+    /// <summary>
+    /// The thumbprint of the certificate the generated file is signed with; from
+    /// <see cref="ConfigurationFile.RdpSigningCertificate"/>, not saved per session.
+    /// </summary>
+    [JsonIgnore]
+    public string? SigningCertificate { get; set; }
+
     /// <summary>A short description of the window size, for lists: the preset, else the mode.</summary>
     [JsonIgnore]
     public string SizeText => Size ?? (Mode switch
@@ -143,6 +150,7 @@ public class RdpSettings : RdpDisplay
         OverlayDisplay(other);
         Title = other.Title ?? Title;
         Drives = other.Drives ?? Drives;
+        SigningCertificate = other.SigningCertificate ?? SigningCertificate;
         Host = other.Host ?? Host;
         Credential = other.Credential ?? Credential;
         Username = other.Username ?? Username;

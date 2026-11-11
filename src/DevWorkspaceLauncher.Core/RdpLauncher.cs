@@ -210,6 +210,10 @@ public static class RdpLauncher
         var geometry = RdpLayout.Compute(settings, monitor, Displays.Chrome(monitor.Dpi));
         var file = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.rdp");
         File.WriteAllText(file, RdpFileWriter.Build(settings, geometry, baseText));
+        if (settings.SigningCertificate is { } thumbprint)
+        {
+            Sign(file, thumbprint, log);
+        }
 
         var wroteCredential = false;
         if (credential is not null)
@@ -313,6 +317,44 @@ public static class RdpLauncher
             "%([su])(?![A-Za-z0-9_]*%)",
             match => match.Groups[1].Value == "s" ? host : user ?? string.Empty);
         return Environment.ExpandEnvironmentVariables(expanded);
+    }
+
+    /// <summary>
+    /// Signs <paramref name="file"/> in place with rdpsign. A failure is logged, not thrown: the file
+    /// still connects, with mstsc's unknown-publisher warning.
+    /// </summary>
+    private static void Sign(string file, string thumbprint, Action<string> log)
+    {
+        thumbprint = thumbprint.Replace(" ", string.Empty);
+        try
+        {
+            using var rdpsign = Process.Start(new ProcessStartInfo("rdpsign.exe", $"/sha256 {thumbprint} \"{file}\"")
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            }) ?? throw new InvalidOperationException("rdpsign.exe did not start.");
+
+            var output = rdpsign.StandardOutput.ReadToEndAsync();
+            var error = rdpsign.StandardError.ReadToEndAsync();
+            if (!rdpsign.WaitForExit(TimeSpan.FromSeconds(10)))
+            {
+                rdpsign.Kill();
+                log("Could not sign the .rdp file: rdpsign did not finish; mstsc will warn about an unknown publisher.");
+                return;
+            }
+
+            if (rdpsign.ExitCode != 0)
+            {
+                var message = string.Join(" ", output.Result.Trim(), error.Result.Trim()).Trim();
+                log($"Could not sign the .rdp file with certificate {thumbprint}: {message}; mstsc will warn about an unknown publisher.");
+            }
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            log($"Could not sign the .rdp file: {ex.Message}; mstsc will warn about an unknown publisher.");
+        }
     }
 
     private static async Task CleanUpAsync(Process mstsc, string file, string? termsrv)

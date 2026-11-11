@@ -146,6 +146,14 @@ public sealed class ConfigurationFile
     /// </summary>
     public List<RdpSizePreset> RdpSizes { get; set; } = [];
 
+    /// <summary>
+    /// The thumbprint of a code-signing certificate in the user's certificate store. When set, every
+    /// generated <c>.rdp</c> file is signed with it, so mstsc skips its "Unknown remote connection"
+    /// warning - provided Windows trusts the certificate and the trusted .rdp publishers policy lists it.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? RdpSigningCertificate { get; set; }
+
     /// <summary>Overrides where VS Code is looked for. Absent means the usual install locations.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? VsCodeExecutable { get; set; }

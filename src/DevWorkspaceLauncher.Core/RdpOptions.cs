@@ -299,6 +299,7 @@ public static class RdpResolver
 
         resolved.Overlay(overrides);
         resolved.Size = sizeName;
+        resolved.SigningCertificate = config.RdpSigningCertificate;
 
         if (string.IsNullOrWhiteSpace(resolved.Host))
         {

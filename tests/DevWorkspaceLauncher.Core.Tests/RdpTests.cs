@@ -96,6 +96,17 @@ public class RdpResolverTests
     }
 
     [Fact]
+    public void The_signing_certificate_comes_from_the_configuration()
+    {
+        var config = Config();
+        config.RdpSigningCertificate = "C890FB18";
+
+        var resolved = RdpResolver.Resolve(config, RdpCommandLine.Parse(["/session:Build server"]));
+
+        Assert.Equal("C890FB18", resolved.SigningCertificate);
+    }
+
+    [Fact]
     public void Unknown_session_is_profile_not_found()
     {
         var error = Assert.Throws<RdpLaunchException>(() => RdpResolver.Resolve(Config(), RdpCommandLine.Parse(["/session:nope"])));
@@ -217,6 +228,20 @@ public class RdpFileWriterTests
         Assert.Contains("desktopwidth:i:1280", lines);
         Assert.DoesNotContain("desktopwidth:i:99", lines);
         Assert.DoesNotContain("not a setting", lines);
+    }
+
+    [Theory]
+    [InlineData(null, null, "redirectclipboard:i:1")]
+    [InlineData("redirectclipboard:i:0\r\n", null, "redirectclipboard:i:0")]
+    [InlineData(null, "redirectclipboard:i:0", "redirectclipboard:i:0")]
+    public void Clipboard_is_shared_unless_the_base_file_or_an_option_says_otherwise(string? baseFile, string? option, string expected)
+    {
+        var settings = new RdpSettings { Host = "srv", Options = option is null ? null : [option] };
+
+        var lines = RdpFileWriter.Build(settings, Geometry, baseFile).Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
+
+        Assert.Single(lines, line => line.StartsWith("redirectclipboard:", StringComparison.Ordinal));
+        Assert.Contains(expected, lines);
     }
 
     [Fact]
