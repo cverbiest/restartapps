@@ -89,6 +89,11 @@ public static class ActivityOperations
         {
             item.Name = newName;
         }
+
+        foreach (var network in config.NetworkInterfaces.Where(network => Same(network.Connect, oldName)))
+        {
+            network.Connect = newName;
+        }
     }
 
     public static void RenameRdpSession(ConfigurationFile config, string oldName, string newName)
@@ -105,6 +110,14 @@ public static class ActivityOperations
         {
             activity.Actions.RemoveAll(item => Same(item.Name, name));
         }
+
+        foreach (var network in config.NetworkInterfaces.Where(network => Same(network.Connect, name)))
+        {
+            network.Connect = null;
+        }
+
+        // An interface whose only setting was the link to this action has none left.
+        config.NetworkInterfaces.RemoveAll(network => network.Name is null && !network.Hidden && network.Connect is null);
     }
 
     public static void RemoveRdpSession(ConfigurationFile config, string name)
@@ -139,5 +152,5 @@ public static class ActivityOperations
         }
     }
 
-    private static bool Same(string a, string b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
+    private static bool Same(string? a, string? b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
 }

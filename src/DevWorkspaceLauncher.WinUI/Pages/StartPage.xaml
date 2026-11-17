@@ -17,6 +17,49 @@
                 Text="Your favorites, in the order of the tray menu. Click a tile to run it; drag tiles to reorder them, or right-click a tile to move or unpin it."
                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                 TextWrapping="Wrap" />
+            <ItemsControl x:Name="Networks" Margin="0,8,0,0">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <local:WrapPanel Spacing="8" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="local:NetworkItem">
+                        <Button Padding="10,4" CornerRadius="12" Opacity="{x:Bind Opacity}"
+                                Click="Network_Click" ToolTipService.ToolTip="{x:Bind Tooltip}">
+                            <Button.ContextFlyout>
+                                <MenuFlyout>
+                                    <MenuFlyoutItem Text="{x:Bind ConnectText}" Click="NetworkConnect_Click">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xE71B;" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutSeparator />
+                                    <MenuFlyoutItem Text="Copy IP address" Tag="address" Click="NetworkCopy_Click">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xE8C8;" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutItem Text="Copy name" Tag="name" Click="NetworkCopy_Click" />
+                                    <MenuFlyoutItem Text="Copy all details" Tag="details" Click="NetworkCopy_Click" />
+                                </MenuFlyout>
+                            </Button.ContextFlyout>
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="{x:Bind Glyph}" FontSize="14" VerticalAlignment="Center" Foreground="{x:Bind IconBrush}" />
+                                <TextBlock Text="{x:Bind Name}" VerticalAlignment="Center" />
+                                <TextBlock Text="{x:Bind Address}" VerticalAlignment="Center" FontFamily="Consolas"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <TextBlock Text="{x:Bind Note}" VerticalAlignment="Center"
+                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource SystemFillColorCautionBrush}" />
+                            </StackPanel>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock x:Name="NoNetwork" Margin="0,8,0,0" Visibility="Collapsed" Text="No network interfaces"
+                       Foreground="{ThemeResource SystemFillColorCautionBrush}" />
+            <HyperlinkButton x:Name="ShowHidden" Padding="0" Margin="0,4,0,0" Visibility="Collapsed" Click="ShowHidden_Click" />
         </StackPanel>
 
         <TextBlock

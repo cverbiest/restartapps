@@ -33,8 +33,21 @@ can be marked as favorite = on start page and tray **done** (pin on All items, A
 * buttons/icons to start items, **done** (a tile per favorite)
 * order of the start items **done** (drag tiles, or right-click: move first / earlier / later / last,
   unpin; the tray menu follows the same order, a new pin goes last)
-* some status info, e.g. current active networks : wired, wifi, vpn
-
+* some status info, e.g. current active networks : wired, wifi, vpn **done** (a chip per connected
+  network under the heading: wired shows the network's name, Wi-Fi the SSID, VPN the connection's
+  name; "no internet" when it has none; updates when Windows reports a change; Hyper-V switches left out)
+  * Developer details: IP address on the chip; disconnected interfaces listed too, icon green when
+    connected; click for a popup with all details (addresses, gateway, DNS, DHCP, MAC, speed, id) **done**
+  * Give interfaces a display name, or hide them (saved per adapter id; hidden ones can be shown) **done**
+  * All text can be copied: popup text selectable plus Copy all; right-click a chip to copy its IP
+    address, name or details **done**
+  * Details in a resizable window with a close button instead of a popup; Connect opens the right
+    dialog (a Windows VPN's own connect dialog, the Wi-Fi list, else the Settings page); Windows VPN
+    connections listed while disconnected too (from the phonebook) **done**
+  * Link an interface to an action (the VPN client's app) as its Connect; interfaces with settings
+    stay listed while their adapter is gone (VPN adapters only exist while connected); right-click a
+    chip to connect; renaming or deleting the action updates the link **done**
+![alt text](image.png)
 ## Launcher window
 
 * Remember the main window's size and position (per computer); move it to the primary monitor when

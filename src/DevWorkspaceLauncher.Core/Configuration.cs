@@ -135,6 +135,9 @@ public sealed class ConfigurationFile
     /// </summary>
     public List<SshHostSettings> SshHosts { get; set; } = [];
 
+    /// <summary>Display names and hidden flags for network interfaces on the start page, by adapter id.</summary>
+    public List<NetworkInterfaceSettings> NetworkInterfaces { get; set; } = [];
+
     /// <summary>The terminal SSH hosts open in. Absent means WezTerm when it is installed, else Windows Terminal.</summary>
     [JsonConverter(typeof(SshClientConverter))]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

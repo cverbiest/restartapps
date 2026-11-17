@@ -364,6 +364,26 @@ once:
 Signing is done with `rdpsign`; when it fails, the reason is logged and the session still connects,
 with mstsc's warning.
 
+The start page lists the network interfaces (wired, Wi-Fi, mobile, VPN) with their IP address, the
+icon green when connected; local virtual switches and other plumbing are left out. Windows' own VPN
+connections are listed while disconnected too. Clicking one opens a window with all its details
+(addresses, gateway, DNS, DHCP, MAC, speed), selectable and with a Copy all button, a Connect button
+(a Windows VPN's own connect dialog, the list of Wi-Fi networks, else the Settings page), and lets you
+give it a display name, hide it, or pick an application from the Actions tab for Connect to start
+instead - the VPN client's app, say. Those are saved in `NetworkInterfaces`, by adapter id, with the
+interface's kind and name when last seen; an interface with settings stays listed (disconnected)
+while its adapter is gone, as a VPN client's adapter is while it is not connected:
+
+```json
+"NetworkInterfaces": [
+  { "Id": "{0F1E2D3C-...}", "Name": "Dock", "Kind": "Wired", "Interface": "Ethernet 2" },
+  { "Id": "{4B5A6978-...}", "Hidden": true, "Kind": "Vpn", "Interface": "Local Area Connection" },
+  { "Id": "{9BEB3451-...}", "Name": "Proton VPN", "Connect": "Proton VPN", "Kind": "Vpn", "Interface": "ProTUN" }
+]
+```
+
+Renaming an action on the Actions tab updates the link; deleting it removes the link.
+
 Comments and trailing commas are tolerated. `devworkspacelauncher.example.json` in this repository
 is an example to copy from.
 
