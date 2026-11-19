@@ -35,8 +35,8 @@ public sealed partial class LaunchItemsPage : Page
         _activitiesOnly = e.Parameter as string == ActivitiesOnly;
         Heading.Text = _activitiesOnly ? "Activities" : "All items";
         Intro.Text = _activitiesOnly
-            ? "An activity runs actions (starts and stops applications, runs built-in actions), opens and closes workspaces and connects RDP sessions and SSH hosts in one click. Add items to one with Add to activity on any tab; Edit changes what it does with each. Pin an activity to put it on the start page and in the tray."
-            : "Everything that runs with one click. Double-click to run; pin an item to put it on the start page and in the tray. A pinned application starts, or comes to the front when it is running.";
+            ? "An activity runs actions (starts and stops applications, runs built-in actions), opens and closes workspaces and connects RDP sessions and SSH hosts in one click. Double-click an activity to run it; pin it to put it on the start page and in the tray. Add items to one with Add to activity on any tab; Edit changes what it does with each."
+            : "Everything that runs with one click. Double-click an item to run it; pin it to put it on the start page and in the tray. A pinned application starts, or comes to the front when it is running.";
         NewButton.Visibility = EditButton.Visibility = _activitiesOnly ? Visibility.Visible : Visibility.Collapsed;
         State.ConfigurationChanged += State_Changed;
         Refresh();
@@ -55,7 +55,8 @@ public sealed partial class LaunchItemsPage : Page
     {
         // Saving (a pin, an edit) refreshes the list; keep the selection across it.
         var selected = Selected().Select(item => item.Target).ToHashSet();
-        var items = _sort.Apply((_activitiesOnly ? LaunchItem.Activities(State.Config) : LaunchItem.All(State.Config))
+        var all = (_activitiesOnly ? LaunchItem.Activities(State.Config) : LaunchItem.All(State.Config)).ToList();
+        var items = _sort.Apply(all
             .Where(item => ItemActions.Matches(Search.Text, item.Name, item.Kind)))
             .ToList();
         List.ItemsSource = items;
@@ -63,6 +64,10 @@ public sealed partial class LaunchItemsPage : Page
         {
             List.SelectedItems.Add(item);
         }
+
+        Count.Text = _activitiesOnly
+            ? ItemActions.CountText(items.Count, all.Count, "activity", "activities")
+            : ItemActions.CountText(items.Count, all.Count, "item", "items");
     }
 
     private List<LaunchItem> Selected() => List.SelectedItems.OfType<LaunchItem>().ToList();

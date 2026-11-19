@@ -62,6 +62,8 @@ public sealed partial class SshHostsPage : Page
                 List.SelectedItems.Add(host);
             }
         }
+
+        Count.Text = ItemActions.CountText(_items.Count, State.SshHosts.Count, "host", "hosts");
     }
 
     private List<SshHost> Selected() => List.SelectedItems.OfType<SshHost>().ToList();

@@ -66,6 +66,8 @@ public sealed partial class ActionsPage : Page
         {
             List.SelectedItems.Add(item);
         }
+
+        Count.Text = ItemActions.CountText(items.Count, State.Config.Actions.Count, "action", "actions");
     }
 
     private List<ActionConfiguration> Selected() =>

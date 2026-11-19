@@ -58,6 +58,8 @@ public sealed partial class RdpSessionsPage : Page
                 List.SelectedItems.Add(session);
             }
         }
+
+        Count.Text = ItemActions.CountText(_items.Count, State.Config.RdpSessions.Count, "session", "sessions");
     }
 
     private List<RdpSession> Selected() => List.SelectedItems.OfType<RdpSession>().ToList();

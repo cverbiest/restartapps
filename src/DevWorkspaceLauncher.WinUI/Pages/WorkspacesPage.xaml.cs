@@ -70,7 +70,8 @@ public sealed partial class WorkspacesPage : Page
     /// <summary>Re-reads the workspace list and re-checks which of the shown rows are open.</summary>
     private void Refresh()
     {
-        var rows = _sort.Apply(WorkspaceController.LoadRows(State.Config, State.ShowAllWorkspaces, NoTicks)
+        var all = WorkspaceController.LoadRows(State.Config, State.ShowAllWorkspaces, NoTicks).ToList();
+        var rows = _sort.Apply(all
             .Where(row => ItemActions.Matches(Search.Text, VsCodeUri.Title(row.Name, row.Uri), row.Location)))
             .ToList();
 
@@ -87,7 +88,9 @@ public sealed partial class WorkspacesPage : Page
             }
         }
 
-        Count.Text = State.ShowAllWorkspaces ? $"{rows.Count} recent" : $"{rows.Count} preferred";
+        Count.Text = State.ShowAllWorkspaces
+            ? ItemActions.CountText(rows.Count, all.Count, "recent", "recent")
+            : ItemActions.CountText(rows.Count, all.Count, "preferred", "preferred");
     }
 
     private List<WorkspaceItem> Selected() => List.SelectedItems.OfType<WorkspaceItem>().ToList();

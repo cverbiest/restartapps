@@ -42,9 +42,7 @@ public sealed class LaunchItem
 
     public Microsoft.UI.Xaml.Media.Brush FavoriteBrush => PinBrush(Favorite);
 
-    public string FavoriteTooltip => Favorite
-        ? "Favorite: on the start page and in the tray menu. Click to remove it."
-        : "Make this a favorite: show it on the start page and in the tray menu.";
+    public string FavoriteTooltip => PinTooltip(Favorite);
 
     public void Run() => _run();
 
@@ -79,6 +77,11 @@ public sealed class LaunchItem
 
     /// <summary>The pin glyph for a favorite flag, for lists that bind the configuration objects directly.</summary>
     public static string PinGlyph(bool favorite) => favorite ? PinnedGlyph : UnpinnedGlyph;
+
+    /// <summary>The pin button's tooltip (and screen reader name) for a favorite flag.</summary>
+    public static string PinTooltip(bool favorite) => favorite
+        ? "Pinned to the start page and the tray menu. Click to unpin."
+        : "Pin to the start page and the tray menu.";
 
     /// <summary>Orange (the app icon's colour) for a favorite, the secondary text colour otherwise.</summary>
     public static Microsoft.UI.Xaml.Media.Brush PinBrush(bool favorite) => favorite

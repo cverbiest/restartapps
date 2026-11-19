@@ -15,7 +15,7 @@
         <StackPanel>
             <TextBlock Text="Actions" Style="{StaticResource TitleTextBlockStyle}" />
             <TextBlock
-                Text="What the launcher can do: start and stop applications, and its built-in actions. Drop an executable or shortcut here to add it as an application. Select actions to run them, or add them to an activity."
+                Text="What the launcher can do: start and stop applications, and its built-in actions. Double-click an action to run it; pin it to put it on the start page and in the tray, where a pinned application starts, or comes to the front when it is running. Drop an executable or shortcut here to add it as an application."
                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                 TextWrapping="Wrap" />
         </StackPanel>
@@ -23,6 +23,7 @@
         <Grid Grid.Row="1" ColumnSpacing="8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <StackPanel Orientation="Horizontal" Spacing="8">
@@ -41,18 +42,27 @@
                 </Button>
                 <Button x:Name="RestartButton" Click="Restart_Click" ToolTipService.ToolTip="Stop the selected applications, then start them again.">
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <FontIcon Glyph="&#xE72C;" FontSize="14" />
+                        <FontIcon Glyph="&#xE8EE;" FontSize="14" />
                         <TextBlock Text="Restart" />
                     </StackPanel>
                 </Button>
                 <Button Click="Add_Click" ToolTipService.ToolTip="Add an application.">
-                    <FontIcon Glyph="&#xE710;" FontSize="14" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE710;" FontSize="14" />
+                        <TextBlock Text="Add" />
+                    </StackPanel>
                 </Button>
                 <Button Click="Edit_Click" ToolTipService.ToolTip="Edit the selected application.">
-                    <FontIcon Glyph="&#xE70F;" FontSize="14" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE70F;" FontSize="14" />
+                        <TextBlock Text="Edit" />
+                    </StackPanel>
                 </Button>
                 <Button Click="Delete_Click" ToolTipService.ToolTip="Delete the selected applications.">
-                    <FontIcon Glyph="&#xE74D;" FontSize="14" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE74D;" FontSize="14" />
+                        <TextBlock Text="Delete" />
+                    </StackPanel>
                 </Button>
                 <DropDownButton ToolTipService.ToolTip="Add the selected actions to an activity (applications as Start, built-in actions as Run).">
                     <StackPanel Orientation="Horizontal" Spacing="8">
@@ -64,13 +74,21 @@
                     </DropDownButton.Flyout>
                 </DropDownButton>
                 <Button Click="Refresh_Click" ToolTipService.ToolTip="Check again which applications are running.">
-                    <FontIcon Glyph="&#xE72C;" FontSize="14" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE72C;" FontSize="14" />
+                        <TextBlock Text="Refresh" />
+                    </StackPanel>
                 </Button>
-                <Button Click="EditConfig_Click" ToolTipService.ToolTip="Open the configuration file in its editor.">
-                    <FontIcon Glyph="&#xE943;" FontSize="14" />
+                <Button Click="EditConfig_Click" ToolTipService.ToolTip="Open the launcher configuration file in an editor, for settings this tab does not edit. The list follows when you save it.">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE8A5;" FontSize="14" />
+                        <TextBlock Text="Edit config file" />
+                    </StackPanel>
                 </Button>
             </StackPanel>
-            <TextBox x:Name="Search" Grid.Column="1" Width="240" PlaceholderText="Search" TextChanged="Search_TextChanged" />
+            <TextBlock x:Name="Count" Grid.Column="1" VerticalAlignment="Center"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            <TextBox x:Name="Search" Grid.Column="2" Width="240" PlaceholderText="Search" TextChanged="Search_TextChanged" />
         </Grid>
 
         <Grid Grid.Row="2"
@@ -95,7 +113,7 @@
                     <ColumnDefinition Width="72" />
                 </Grid.ColumnDefinitions>
                 <Button x:Name="FavHeader" Style="{StaticResource SortHeader}">
-                    <TextBlock Text="Fav" Style="{StaticResource CaptionTextBlockStyle}" />
+                    <TextBlock Text="Pin" Style="{StaticResource CaptionTextBlockStyle}" />
                 </Button>
                 <Button x:Name="NameHeader" Grid.Column="1" Style="{StaticResource SortHeader}">
                     <TextBlock Text="Action" Style="{StaticResource CaptionTextBlockStyle}" />
@@ -133,8 +151,7 @@
                                 <ColumnDefinition Width="72" />
                             </Grid.ColumnDefinitions>
                             <Button Click="Favorite_Click" Padding="6" Background="Transparent" BorderThickness="0"
-                                    ToolTipService.ToolTip="Favorite: on the start page and in the tray menu, where an application starts or comes to the front, and a built-in action runs. Click to change."
-                                    AutomationProperties.Name="Favorite">
+                                    ToolTipService.ToolTip="{x:Bind FavoriteTooltip}" AutomationProperties.Name="{x:Bind FavoriteTooltip}">
                                 <FontIcon Glyph="{x:Bind FavoriteGlyph}" Foreground="{x:Bind FavoriteBrush}" FontSize="14" />
                             </Button>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">

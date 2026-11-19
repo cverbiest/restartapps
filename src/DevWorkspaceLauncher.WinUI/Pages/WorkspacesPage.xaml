@@ -15,14 +15,13 @@
         <StackPanel>
             <TextBlock Text="VS Code workspaces" Style="{StaticResource TitleTextBlockStyle}" />
             <TextBlock
-                Text="Double-click a workspace to open it, or to bring its window to the front when it is open. The star keeps a workspace on the preferred list; Show all recent lists everything VS Code has opened. Click a column header to sort."
+                Text="Double-click a workspace to open it, or to bring its window to the front when it is open. The star keeps a workspace on the preferred list; Show all recent lists everything VS Code has opened."
                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                 TextWrapping="Wrap" />
         </StackPanel>
 
         <Grid Grid.Row="1" ColumnSpacing="8">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
@@ -43,7 +42,10 @@
                     </StackPanel>
                 </Button>
                 <Button Click="Delete_Click" ToolTipService.ToolTip="Remove the selected workspaces from the preferred list.">
-                    <FontIcon Glyph="&#xE74D;" FontSize="14" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE74D;" FontSize="14" />
+                        <TextBlock Text="Delete" />
+                    </StackPanel>
                 </Button>
                 <DropDownButton ToolTipService.ToolTip="Add the selected workspaces to an activity (as Open).">
                     <StackPanel Orientation="Horizontal" Spacing="8">
@@ -55,13 +57,16 @@
                     </DropDownButton.Flyout>
                 </DropDownButton>
                 <Button Click="Refresh_Click" ToolTipService.ToolTip="Re-read the workspace list and check which ones are open.">
-                    <FontIcon Glyph="&#xE72C;" FontSize="14" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE72C;" FontSize="14" />
+                        <TextBlock Text="Refresh" />
+                    </StackPanel>
                 </Button>
                 <ToggleButton x:Name="ShowAll" Content="Show all recent" Click="ShowAll_Click" />
             </StackPanel>
-            <TextBlock x:Name="Count" Grid.Column="2" VerticalAlignment="Center"
+            <TextBlock x:Name="Count" Grid.Column="1" VerticalAlignment="Center"
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-            <TextBox x:Name="Search" Grid.Column="3" Width="240" PlaceholderText="Search" TextChanged="Search_TextChanged" />
+            <TextBox x:Name="Search" Grid.Column="2" Width="240" PlaceholderText="Search" TextChanged="Search_TextChanged" />
         </Grid>
 
         <Grid Grid.Row="2"

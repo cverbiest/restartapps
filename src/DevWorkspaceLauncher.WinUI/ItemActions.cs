@@ -17,6 +17,13 @@ internal static class ItemActions
         query.Split(' ', StringSplitOptions.RemoveEmptyEntries).All(word =>
             fields.Any(field => field?.Contains(word, StringComparison.CurrentCultureIgnoreCase) == true));
 
+    /// <summary>The row count next to the search box: "12 hosts", or "3 of 12 hosts" while searching.</summary>
+    public static string CountText(int shown, int total, string singular, string plural)
+    {
+        var noun = total == 1 ? singular : plural;
+        return shown == total ? $"{total} {noun}" : $"{shown} of {total} {noun}";
+    }
+
     public static string NameOf(object item) => item switch
     {
         Activity activity => activity.Name,

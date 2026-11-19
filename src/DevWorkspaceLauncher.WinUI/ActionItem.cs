@@ -40,6 +40,8 @@ public sealed class ActionItem(ActionConfiguration action, bool running)
 
     public Microsoft.UI.Xaml.Media.Brush FavoriteBrush => LaunchItem.PinBrush(Target.Favorite);
 
+    public string FavoriteTooltip => LaunchItem.PinTooltip(Target.Favorite);
+
     /// <summary>The kind as the lists show it.</summary>
     public static string KindOf(ActionConfiguration action) => action is BuiltInAction ? "Built-in" : "Application";
 
