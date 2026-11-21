@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
@@ -15,6 +16,7 @@ public sealed partial class LaunchItemsPage : Page
     /// <summary>The navigation parameter that shows only the activities.</summary>
     public const string ActivitiesOnly = "activities";
 
+    private readonly ObservableCollection<LaunchItem> _items = [];
     private readonly ColumnSort<LaunchItem> _sort;
     private bool _activitiesOnly;
 
@@ -23,6 +25,7 @@ public sealed partial class LaunchItemsPage : Page
     public LaunchItemsPage()
     {
         InitializeComponent();
+        List.ItemsSource = _items;
         ItemActions.AttachActivityMenu(ActivityMenu, () => XamlRoot, () => Selected().Select(item => item.Target).ToList());
         _sort = new ColumnSort<LaunchItem>(Refresh,
             (FavHeader, item => item.Favorite ? 0 : 1),
@@ -51,23 +54,17 @@ public sealed partial class LaunchItemsPage : Page
 
     private void Search_TextChanged(object sender, TextChangedEventArgs e) => Refresh();
 
+    /// <summary>Saving (a pin, an edit) refreshes the list; only the rows that changed are touched.</summary>
     private void Refresh()
     {
-        // Saving (a pin, an edit) refreshes the list; keep the selection across it.
-        var selected = Selected().Select(item => item.Target).ToHashSet();
         var all = (_activitiesOnly ? LaunchItem.Activities(State.Config) : LaunchItem.All(State.Config)).ToList();
-        var items = _sort.Apply(all
+        GridRows.Sync(List, _items, _sort.Apply(all
             .Where(item => ItemActions.Matches(Search.Text, item.Name, item.Kind)))
-            .ToList();
-        List.ItemsSource = items;
-        foreach (var item in items.Where(item => selected.Contains(item.Target)))
-        {
-            List.SelectedItems.Add(item);
-        }
+            .ToList());
 
         Count.Text = _activitiesOnly
-            ? ItemActions.CountText(items.Count, all.Count, "activity", "activities")
-            : ItemActions.CountText(items.Count, all.Count, "item", "items");
+            ? ItemActions.CountText(_items.Count, all.Count, "activity", "activities")
+            : ItemActions.CountText(_items.Count, all.Count, "item", "items");
     }
 
     private List<LaunchItem> Selected() => List.SelectedItems.OfType<LaunchItem>().ToList();

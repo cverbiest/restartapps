@@ -1,9 +1,13 @@
 namespace DevWorkspaceLauncher.WinUI;
 
 /// <summary>A <see cref="WorkspaceRow"/> as the VS Code workspaces list shows it.</summary>
-public sealed class WorkspaceItem(WorkspaceRow row)
+public sealed class WorkspaceItem(WorkspaceRow row) : GridRow<WorkspaceItem>
 {
-    public WorkspaceRow Row { get; } = row;
+    public WorkspaceRow Row { get; private set; } = row;
+
+    public override string Key => Row.Uri;
+
+    protected override void CopyFrom(WorkspaceItem fresh) => Row = fresh.Row;
 
     public string Name => Row.Name;
 

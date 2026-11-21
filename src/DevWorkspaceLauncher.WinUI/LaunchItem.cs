@@ -4,12 +4,12 @@ namespace DevWorkspaceLauncher.WinUI;
 /// Something that runs with one click - an activity, action, RDP session or SSH host - as the start page, the All
 /// items and Activities pages and the tray menu show it.
 /// </summary>
-public sealed class LaunchItem
+public sealed class LaunchItem : GridRow<LaunchItem>
 {
     private const string PinnedGlyph = "";
     private const string UnpinnedGlyph = "";
 
-    private readonly Action _run;
+    private Action _run;
 
     private LaunchItem(IFavorite target, string kind, string glyph, string tooltip, Action run)
     {
@@ -23,17 +23,29 @@ public sealed class LaunchItem
     private static AppState State => App.State;
 
     /// <summary>The item: an <see cref="Activity"/>, <see cref="ActionConfiguration"/>, <see cref="RdpSession"/> or <see cref="SshHost"/>.</summary>
-    public IFavorite Target { get; }
+    public IFavorite Target { get; private set; }
 
     public string Name => ItemActions.NameOf(Target);
 
     /// <summary>What sort of item this is, as the lists show it.</summary>
-    public string Kind { get; }
+    public string Kind { get; private set; }
 
-    public string Glyph { get; }
+    public string Glyph { get; private set; }
 
     /// <summary>What running it does.</summary>
-    public string Tooltip { get; }
+    public string Tooltip { get; private set; }
+
+    /// <summary>Names are unique within a kind, not across kinds.</summary>
+    public override string Key => $"{Kind}\n{Name}";
+
+    protected override void CopyFrom(LaunchItem fresh)
+    {
+        Target = fresh.Target;
+        Kind = fresh.Kind;
+        Glyph = fresh.Glyph;
+        Tooltip = fresh.Tooltip;
+        _run = fresh._run;
+    }
 
     /// <summary>On the start page and in the tray menu.</summary>
     public bool Favorite => Target.Favorite;

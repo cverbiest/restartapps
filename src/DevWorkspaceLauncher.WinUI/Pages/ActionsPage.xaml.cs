@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
@@ -11,6 +12,7 @@ namespace DevWorkspaceLauncher.WinUI.Pages;
 /// </summary>
 public sealed partial class ActionsPage : Page
 {
+    private readonly ObservableCollection<ActionItem> _items = [];
     private readonly ColumnSort<ActionItem> _sort;
 
     private static AppState State => App.State;
@@ -18,6 +20,7 @@ public sealed partial class ActionsPage : Page
     public ActionsPage()
     {
         InitializeComponent();
+        List.ItemsSource = _items;
         ItemActions.AttachActivityMenu(ActivityMenu, () => XamlRoot, () => Selected().Cast<object>().ToList());
         _sort = new ColumnSort<ActionItem>(Refresh,
             (FavHeader, item => item.Target.Favorite ? 0 : 1),
@@ -53,21 +56,15 @@ public sealed partial class ActionsPage : Page
 
     private void Refresh_Click(object sender, RoutedEventArgs e) => Refresh();
 
+    /// <summary>Saving (a pin, an edit) refreshes the list; only the rows that changed are touched.</summary>
     private void Refresh()
     {
-        // Saving (a pin, an edit) refreshes the list; keep the selection across it.
-        var selected = Selected().ToHashSet();
-        var items = _sort.Apply(State.Config.Actions
+        GridRows.Sync(List, _items, _sort.Apply(State.Config.Actions
             .Select(action => new ActionItem(action, action is ApplicationAction { Disabled: false } app && AppController.IsRunning(app)))
             .Where(item => ItemActions.Matches(Search.Text, item.Name, item.Kind, item.Details)))
-            .ToList();
-        List.ItemsSource = items;
-        foreach (var item in items.Where(item => selected.Contains(item.Target)))
-        {
-            List.SelectedItems.Add(item);
-        }
+            .ToList());
 
-        Count.Text = ItemActions.CountText(items.Count, State.Config.Actions.Count, "action", "actions");
+        Count.Text = ItemActions.CountText(_items.Count, State.Config.Actions.Count, "action", "actions");
     }
 
     private List<ActionConfiguration> Selected() =>

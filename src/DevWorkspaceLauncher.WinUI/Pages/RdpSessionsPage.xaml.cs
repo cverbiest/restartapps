@@ -11,7 +11,7 @@ public sealed partial class RdpSessionsPage : Page
 {
     private const string DefaultSize = "(full screen)";
 
-    private readonly ObservableCollection<RdpSession> _items = [];
+    private readonly ObservableCollection<RdpSessionItem> _items = [];
     private readonly ColumnSort<RdpSession> _sort;
 
     private static AppState State => App.State;
@@ -44,25 +44,17 @@ public sealed partial class RdpSessionsPage : Page
 
     private void Search_TextChanged(object sender, TextChangedEventArgs e) => Refresh();
 
+    /// <summary>Saving (a pin, an edit) refreshes the list; only the rows that changed are touched.</summary>
     private void Refresh()
     {
-        // Saving (a pin, an edit) refreshes the list; keep the selection across it.
-        var selected = Selected().Select(session => session.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        _items.Clear();
-        foreach (var session in _sort.Apply(State.Config.RdpSessions.Where(session =>
-            ItemActions.Matches(Search.Text, session.Name, session.Host, session.Credential))))
-        {
-            _items.Add(session);
-            if (selected.Contains(session.Name))
-            {
-                List.SelectedItems.Add(session);
-            }
-        }
+        GridRows.Sync(List, _items, _sort.Apply(State.Config.RdpSessions.Where(session =>
+                ItemActions.Matches(Search.Text, session.Name, session.Host, session.Credential)))
+            .Select(session => new RdpSessionItem(session)).ToList());
 
         Count.Text = ItemActions.CountText(_items.Count, State.Config.RdpSessions.Count, "session", "sessions");
     }
 
-    private List<RdpSession> Selected() => List.SelectedItems.OfType<RdpSession>().ToList();
+    private List<RdpSession> Selected() => List.SelectedItems.OfType<RdpSessionItem>().Select(item => item.Session).ToList();
 
     private void Connect_Click(object sender, RoutedEventArgs e)
     {
@@ -81,18 +73,18 @@ public sealed partial class RdpSessionsPage : Page
 
     private void List_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
     {
-        if ((e.OriginalSource as FrameworkElement)?.DataContext is RdpSession session
+        if ((e.OriginalSource as FrameworkElement)?.DataContext is RdpSessionItem item
             && !LaunchItemsPage.IsInButton(e.OriginalSource as DependencyObject))
         {
-            State.ConnectRdp(session);
+            State.ConnectRdp(item.Session);
         }
     }
 
     private void Favorite_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is FrameworkElement { DataContext: RdpSession session })
+        if (sender is FrameworkElement { DataContext: RdpSessionItem item })
         {
-            FavoriteOrdering.Toggle(session);
+            FavoriteOrdering.Toggle(item.Session);
             State.Save();
         }
     }

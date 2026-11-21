@@ -124,15 +124,15 @@
                                 <ColumnDefinition Width="56" />
                             </Grid.ColumnDefinitions>
                             <Button Click="Preferred_Click" Padding="6" Background="Transparent" BorderThickness="0"
-                                    ToolTipService.ToolTip="{x:Bind PreferredTooltip}" AutomationProperties.Name="{x:Bind PreferredTooltip}">
-                                <FontIcon Glyph="{x:Bind PreferredGlyph}" Foreground="{x:Bind PreferredBrush}" FontSize="14" />
+                                    ToolTipService.ToolTip="{x:Bind PreferredTooltip, Mode=OneWay}" AutomationProperties.Name="{x:Bind PreferredTooltip, Mode=OneWay}">
+                                <FontIcon Glyph="{x:Bind PreferredGlyph, Mode=OneWay}" Foreground="{x:Bind PreferredBrush, Mode=OneWay}" FontSize="14" />
                             </Button>
-                            <TextBlock Grid.Column="1" Text="{x:Bind Title}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                            <TextBlock Grid.Column="2" Text="{x:Bind Location}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" ToolTipService.ToolTip="{x:Bind Uri}" />
-                            <TextBlock Grid.Column="3" Text="{x:Bind LastUsedText}" VerticalAlignment="Center"
+                            <TextBlock Grid.Column="1" Text="{x:Bind Title, Mode=OneWay}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Grid.Column="2" Text="{x:Bind Location, Mode=OneWay}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" ToolTipService.ToolTip="{x:Bind Uri, Mode=OneWay}" />
+                            <TextBlock Grid.Column="3" Text="{x:Bind LastUsedText, Mode=OneWay}" VerticalAlignment="Center"
                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                            <TextBlock Grid.Column="4" Text="{x:Bind Status}" VerticalAlignment="Center"
+                            <TextBlock Grid.Column="4" Text="{x:Bind Status, Mode=OneWay}" VerticalAlignment="Center"
                                        Foreground="{ThemeResource SystemFillColorSuccessBrush}" />
                         </Grid>
                     </DataTemplate>

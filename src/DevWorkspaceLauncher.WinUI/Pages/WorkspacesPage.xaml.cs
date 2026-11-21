@@ -75,18 +75,8 @@ public sealed partial class WorkspacesPage : Page
             .Where(row => ItemActions.Matches(Search.Text, VsCodeUri.Title(row.Name, row.Uri), row.Location)))
             .ToList();
 
-        // A refresh happens whenever the window is activated; keep the selection across it.
-        var selected = Selected().Select(item => item.Uri).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        _items.Clear();
-        foreach (var row in rows)
-        {
-            var item = new WorkspaceItem(row);
-            _items.Add(item);
-            if (selected.Contains(row.Uri))
-            {
-                List.SelectedItems.Add(item);
-            }
-        }
+        // A refresh happens whenever the window is activated; only the rows that changed are touched.
+        GridRows.Sync(List, _items, rows.Select(row => new WorkspaceItem(row)).ToList());
 
         Count.Text = State.ShowAllWorkspaces
             ? ItemActions.CountText(rows.Count, all.Count, "recent", "recent")

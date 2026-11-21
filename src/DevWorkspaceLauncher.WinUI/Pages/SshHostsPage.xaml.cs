@@ -12,7 +12,7 @@ namespace DevWorkspaceLauncher.WinUI.Pages;
 /// </summary>
 public sealed partial class SshHostsPage : Page
 {
-    private readonly ObservableCollection<SshHost> _items = [];
+    private readonly ObservableCollection<SshHostItem> _items = [];
     private readonly ColumnSort<SshHost> _sort;
 
     private static AppState State => App.State;
@@ -48,25 +48,18 @@ public sealed partial class SshHostsPage : Page
 
     private void Search_TextChanged(object sender, TextChangedEventArgs e) => Refresh();
 
+    /// <summary>Saving (a pin, an edit) refreshes the list; only the rows that changed are touched.</summary>
     private void Refresh()
     {
-        // Saving (a pin, an edit) refreshes the list; keep the selection across it.
-        var selected = Selected().Select(host => host.Alias).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        _items.Clear();
-        foreach (var host in _sort.Apply(State.SshHosts.Where(host =>
-            ItemActions.Matches(Search.Text, host.Alias, host.HostName, host.User, host.IdentityFile, host.Also))))
-        {
-            _items.Add(host);
-            if (selected.Contains(host.Alias))
-            {
-                List.SelectedItems.Add(host);
-            }
-        }
+        var hosts = State.SshHosts;
+        GridRows.Sync(List, _items, _sort.Apply(hosts.Where(host =>
+                ItemActions.Matches(Search.Text, host.Alias, host.HostName, host.User, host.IdentityFile, host.Also)))
+            .Select(host => new SshHostItem(host)).ToList());
 
-        Count.Text = ItemActions.CountText(_items.Count, State.SshHosts.Count, "host", "hosts");
+        Count.Text = ItemActions.CountText(_items.Count, hosts.Count, "host", "hosts");
     }
 
-    private List<SshHost> Selected() => List.SelectedItems.OfType<SshHost>().ToList();
+    private List<SshHost> Selected() => List.SelectedItems.OfType<SshHostItem>().Select(item => item.Host).ToList();
 
     private void Connect_Click(object sender, RoutedEventArgs e)
     {
@@ -85,18 +78,18 @@ public sealed partial class SshHostsPage : Page
 
     private void List_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
     {
-        if ((e.OriginalSource as FrameworkElement)?.DataContext is SshHost host
+        if ((e.OriginalSource as FrameworkElement)?.DataContext is SshHostItem item
             && !LaunchItemsPage.IsInButton(e.OriginalSource as DependencyObject))
         {
-            State.ConnectSsh(host);
+            State.ConnectSsh(item.Host);
         }
     }
 
     private void Favorite_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is FrameworkElement { DataContext: SshHost host })
+        if (sender is FrameworkElement { DataContext: SshHostItem item })
         {
-            FavoriteOrdering.Toggle(host);
+            FavoriteOrdering.Toggle(item.Host);
             State.Save();
         }
     }

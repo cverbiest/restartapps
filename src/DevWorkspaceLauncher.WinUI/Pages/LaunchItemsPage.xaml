@@ -105,7 +105,7 @@
                 </ListView.ItemContainerStyle>
                 <ListView.ItemTemplate>
                     <DataTemplate x:DataType="local:LaunchItem">
-                        <Grid ColumnSpacing="8" MinHeight="40" ToolTipService.ToolTip="{x:Bind Tooltip}">
+                        <Grid ColumnSpacing="8" MinHeight="40" ToolTipService.ToolTip="{x:Bind Tooltip, Mode=OneWay}">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="44" />
                                 <ColumnDefinition Width="32" />
@@ -113,12 +113,12 @@
                                 <ColumnDefinition Width="160" />
                             </Grid.ColumnDefinitions>
                             <Button Click="Favorite_Click" Padding="6" Background="Transparent" BorderThickness="0"
-                                    ToolTipService.ToolTip="{x:Bind FavoriteTooltip}" AutomationProperties.Name="{x:Bind FavoriteTooltip}">
-                                <FontIcon Glyph="{x:Bind FavoriteGlyph}" Foreground="{x:Bind FavoriteBrush}" FontSize="14" />
+                                    ToolTipService.ToolTip="{x:Bind FavoriteTooltip, Mode=OneWay}" AutomationProperties.Name="{x:Bind FavoriteTooltip, Mode=OneWay}">
+                                <FontIcon Glyph="{x:Bind FavoriteGlyph, Mode=OneWay}" Foreground="{x:Bind FavoriteBrush, Mode=OneWay}" FontSize="14" />
                             </Button>
-                            <FontIcon Grid.Column="1" Glyph="{x:Bind Glyph}" FontSize="16" />
-                            <TextBlock Grid.Column="2" Text="{x:Bind Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                            <TextBlock Grid.Column="3" Text="{x:Bind Kind}" VerticalAlignment="Center"
+                            <FontIcon Grid.Column="1" Glyph="{x:Bind Glyph, Mode=OneWay}" FontSize="16" />
+                            <TextBlock Grid.Column="2" Text="{x:Bind Name, Mode=OneWay}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Grid.Column="3" Text="{x:Bind Kind, Mode=OneWay}" VerticalAlignment="Center"
                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                         </Grid>
                     </DataTemplate>

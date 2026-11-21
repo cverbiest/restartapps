@@ -4,9 +4,18 @@ namespace DevWorkspaceLauncher.WinUI;
 /// An <see cref="ActionConfiguration"/> as the Actions list shows it, with whether it (an application)
 /// was running at the last refresh.
 /// </summary>
-public sealed class ActionItem(ActionConfiguration action, bool running)
+public sealed class ActionItem(ActionConfiguration action, bool running) : GridRow<ActionItem>
 {
-    public ActionConfiguration Target { get; } = action;
+    public ActionConfiguration Target { get; private set; } = action;
+
+    /// <summary>Names are unique within a kind.</summary>
+    public override string Key => $"{Kind}\n{Name}";
+
+    protected override void CopyFrom(ActionItem fresh)
+    {
+        Target = fresh.Target;
+        Running = fresh.Running;
+    }
 
     public string Name => Target.Name;
 
@@ -30,7 +39,7 @@ public sealed class ActionItem(ActionConfiguration action, bool running)
         _ => string.Empty
     };
 
-    public bool Running { get; } = running;
+    public bool Running { get; private set; } = running;
 
     public bool Disabled => Target is ApplicationAction { Disabled: true };
 
