@@ -48,6 +48,13 @@ public sealed partial class SshHostsPage : Page
 
     private void Search_TextChanged(object sender, TextChangedEventArgs e) => Refresh();
 
+    /// <summary>Reads ~/.ssh/config again, for changes made outside the launcher.</summary>
+    private void Refresh_Click(object sender, RoutedEventArgs e)
+    {
+        State.ReloadSshHosts();
+        Refresh();
+    }
+
     /// <summary>Saving (a pin, an edit) refreshes the list; only the rows that changed are touched.</summary>
     private void Refresh()
     {

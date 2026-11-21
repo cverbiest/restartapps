@@ -84,7 +84,7 @@ Code currently has open, and launches them:
 | **Close Selected** | Asks the ticked windows to close. |
 | **Open Selected** | Opens every workspace ticked Open. |
 | **Show all recent** | Widens the list from the preferred entries to every workspace VS Code has opened, most recent first. |
-| **Refresh** | Re-reads the list and re-checks which entries are open. |
+| **Refresh** | Re-reads the list and re-checks which entries are open (F5). |
 
 Like the Kill and Restart ticks, Close and Open are session-only and are never written to the file.
 
@@ -366,7 +366,9 @@ with mstsc's warning.
 
 The start page lists the network interfaces (wired, Wi-Fi, mobile, VPN) with their IP address, the
 icon green when connected; local virtual switches and other plumbing are left out. Windows' own VPN
-connections are listed while disconnected too. Clicking one opens a window with all its details
+connections are listed while disconnected too. The list follows the changes Windows reports
+(connected, disconnected, a new address); for others, such as a renamed adapter, press **Refresh**
+(or F5). Clicking one opens a window with all its details
 (addresses, gateway, DNS, DHCP, MAC, speed), selectable and with a Copy all button, a Connect button
 (a Windows VPN's own connect dialog, the list of Wi-Fi networks, else the Settings page), and lets you
 give it a display name, hide it, or pick an application from the Actions tab for Connect to start

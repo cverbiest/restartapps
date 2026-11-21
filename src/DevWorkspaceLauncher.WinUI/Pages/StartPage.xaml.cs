@@ -47,6 +47,16 @@ public sealed partial class StartPage : Page
 
     private void Network_Changed(object? sender, EventArgs e) => DispatcherQueue.TryEnqueue(RefreshNetworks);
 
+    /// <summary>
+    /// Reads everything again: Windows raises no change event for some changes, such as an adapter
+    /// that was renamed.
+    /// </summary>
+    private void Refresh_Click(object sender, RoutedEventArgs e)
+    {
+        Refresh();
+        RefreshNetworks();
+    }
+
     /// <summary>Reads the interfaces off the UI thread, then shows them; unchanged ones are left alone.</summary>
     private async void RefreshNetworks()
     {

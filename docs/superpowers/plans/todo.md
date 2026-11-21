@@ -47,6 +47,8 @@ can be marked as favorite = on start page and tray **done** (pin on All items, A
   * Link an interface to an action (the VPN client's app) as its Connect; interfaces with settings
     stay listed while their adapter is gone (VPN adapters only exist while connected); right-click a
     chip to connect; renaming or deleting the action updates the link **done**
+  * Refresh button on the start page, for changes Windows does not report (a renamed adapter); F5
+    refreshes the Start, Actions, Workspaces and SSH hosts tabs (SSH hosts got a Refresh button) **done**
 ![alt text](image.png)
 ## Launcher window
 
