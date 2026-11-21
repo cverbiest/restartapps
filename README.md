@@ -364,6 +364,10 @@ once:
 Signing is done with `rdpsign`; when it fails, the reason is logged and the session still connects,
 with mstsc's warning.
 
+RDP sessions always get the Windows key: the generated file says `keyboardhook:i:1`, so Win,
+Win+R, Alt+Tab and the other Windows key combinations go to the remote session, also when it is in
+a window. A base file or option cannot change that.
+
 The start page lists the network interfaces (wired, Wi-Fi, mobile, VPN) with their IP address, the
 icon green when connected; local virtual switches and other plumbing are left out. Windows' own VPN
 connections are listed while disconnected too. The list follows the changes Windows reports

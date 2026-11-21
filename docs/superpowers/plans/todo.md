@@ -22,6 +22,7 @@ These include
       "trusted .rdp publishers" policy); tested: a trusted publisher skips the dialog **done**
       (`RdpSigningCertificate` in the configuration; setup steps in the README)
     * Clipboard shared by default (`redirectclipboard:i:1`) **done**
+  * Windows key combinations always go to the session, windowed too (`keyboardhook:i:1`) **done**
     * Later: set up the certificate from the app (create it, show the thumbprint for the policy)
 * profiles
 * vscode workspaces

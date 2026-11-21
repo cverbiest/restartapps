@@ -244,6 +244,20 @@ public class RdpFileWriterTests
         Assert.Contains(expected, lines);
     }
 
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData("keyboardhook:i:2\r\n", null)]
+    [InlineData(null, "keyboardhook:i:0")]
+    public void Windows_key_combinations_always_go_to_the_session(string? baseFile, string? option)
+    {
+        var settings = new RdpSettings { Host = "srv", Options = option is null ? null : [option] };
+
+        var lines = RdpFileWriter.Build(settings, Geometry, baseFile).Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
+
+        Assert.Single(lines, line => line.StartsWith("keyboardhook:", StringComparison.Ordinal));
+        Assert.Contains("keyboardhook:i:1", lines);
+    }
+
     [Fact]
     public void Configuration_round_trips_sessions_without_nulls()
     {

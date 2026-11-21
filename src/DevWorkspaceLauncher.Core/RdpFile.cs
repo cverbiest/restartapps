@@ -135,6 +135,9 @@ public static class RdpFileWriter
         Set(string.Create(CultureInfo.InvariantCulture, $"winposstr:s:0,1,{w.Left},{w.Top},{w.Right},{w.Bottom}"));
         Set("smart sizing:i:0");
         Set("use multimon:i:0");
+
+        // Windows key combinations (Win, Win+R, Alt+Tab) always go to the session, windowed too.
+        Set("keyboardhook:i:1");
         if (settings.Zoom is { } zoom)
         {
             Set($"desktopscalefactor:i:{zoom}");
