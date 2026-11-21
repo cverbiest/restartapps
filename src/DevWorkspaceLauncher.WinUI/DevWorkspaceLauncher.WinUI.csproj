@@ -19,6 +19,7 @@
     <WindowsPackageType>None</WindowsPackageType>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <SelfContained>false</SelfContained>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <PublishDir>bin\$(Configuration)\$(TargetFramework)\publish\</PublishDir>
   </PropertyGroup>
 
@@ -28,7 +29,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.5.1" />
+    <!-- WinUI and the runtime only, not the Microsoft.WindowsAppSDK metapackage: that one also brings
+         the AI, ML, Search and Widgets components (onnxruntime, DirectML: some 60 MB the app never
+         loads) into the self-contained folder. -->
+    <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="2.3.9" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.Runtime" Version="2.5.1" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DevWorkspaceLauncher.Core\DevWorkspaceLauncher.Core.csproj" />
@@ -36,7 +41,35 @@
 
   <!-- An unpackaged publish leaves out the app's own resource index, which holds the compiled XAML;
        without it the published app fails at startup (0xC000027B in Microsoft.UI.Xaml.dll). -->
-  <Target Name="CopyAppPriToPublishDir" AfterTargets="Publish">
+  <Target Name="CopyAppPriToPublishDir" AfterTargets="Publish" Condition="'$(SingleFile)' != 'true'">
     <Copy SourceFiles="$(OutDir)$(TargetName).pri" DestinationFolder="$(PublishDir)" />
   </Target>
+
+  <!-- The Windows App SDK publishes WinUI's own strings (Microsoft.ui.xaml.dll.mui) in some 80
+       languages, a folder each. Only the languages in PublishXamlLanguages are published; Windows falls
+       back to en-us for the others. Taken out of the publish list, so the single-file build leaves them
+       out too. -->
+  <PropertyGroup>
+    <PublishXamlLanguages>en-us;en-GB</PublishXamlLanguages>
+  </PropertyGroup>
+  <Target Name="RemoveUnusedXamlLanguages" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <_XamlMui Include="@(ResolvedFileToPublish)" Condition="'%(Extension)' == '.mui'">
+        <Language>$([System.IO.Path]::GetDirectoryName('%(RelativePath)'))</Language>
+      </_XamlMui>
+      <_UnusedXamlMui Include="@(_XamlMui)"
+                      Condition="'%(Language)' != '' and !$([System.String]::Copy(';$(PublishXamlLanguages);').ToLowerInvariant().Contains($([System.String]::Copy(';%(Language);').ToLowerInvariant())))" />
+      <ResolvedFileToPublish Remove="@(_UnusedXamlMui)" />
+    </ItemGroup>
+  </Target>
+
+  <!-- dotnet publish -c Release -p:SingleFile=true: the whole app in one .exe, in publish-single. It
+       unpacks itself to %TEMP%\.net on its first start; the .NET 10 desktop runtime is still needed. -->
+  <PropertyGroup Condition="'$(SingleFile)' == 'true'">
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    <!-- The Windows App SDK embeds the app's resources.pri in the bundle only with this. -->
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <PublishDir>bin\$(Configuration)\$(TargetFramework)\publish-single\</PublishDir>
+  </PropertyGroup>
 </Project>

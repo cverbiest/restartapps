@@ -423,7 +423,23 @@ dotnet publish src/DevWorkspaceLauncher.WinUI -c Release
 
 It lands in `src\DevWorkspaceLauncher.WinUI\bin\Release\net10.0-windows10.0.26100.0\publish`. It is
 unpackaged — run the `.exe` from that folder, no installer — and carries the Windows App SDK runtime
-in the folder, so it also needs only the .NET 10 desktop runtime.
+in the folder, so it also needs only the .NET 10 desktop runtime. Copy the whole folder (about 100
+files, 91 MB): the `.exe` is a small launcher, and the Windows App SDK DLLs, `Microsoft.UI.Xaml`,
+`Assets` and the `.pri` file next to it are all loaded at startup. The project leaves out the parts
+of the Windows App SDK the app does not use (AI, ML, Search, Widgets), and keeps WinUI's own strings
+only in the languages listed in `PublishXamlLanguages` (en-us, en-GB); other languages fall back to
+English. The `.pdb` files are only for debugging and may be left out.
+
+For a single portable `.exe` instead of a folder:
+
+```powershell
+dotnet publish src/DevWorkspaceLauncher.WinUI -c Release -p:SingleFile=true
+```
+
+It lands in `publish-single` next to `publish`: one `DevWorkspaceLauncher.WinUI.exe` of about 90 MB that
+runs on its own from any folder. On its first start it unpacks itself to
+`%TEMP%\.net\DevWorkspaceLauncher.WinUI` (a few seconds); later starts reuse that copy and are about as
+fast as the folder build. It still needs the .NET 10 desktop runtime.
 
 ## Run (PowerShell version)
 
