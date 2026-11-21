@@ -22,6 +22,10 @@ only the original bare-array configuration layout.
 Both apps show the same lists and buttons; where they differ is layout. In the WinUI app, activities,
 sessions and app profiles are items in the navigation rail, the latest result shows in a banner, and
 the full log has its own **Activity log** page; **Settings** shows where the configuration file is.
+**Settings** also sets whether the WinUI app starts at logon: not at all, in the tray only (the tray
+menu's **Start with Windows** turns that on), or with the window open. It is the app's value under
+`HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, for the copy you set it from; Settings says
+when Windows starts another copy.
 In the WinForms app they are rows of one-click buttons above the tabs, with the log at the bottom.
 
 The **Apps** list has one row per configured application (in the WinUI app, the **Actions** tab).

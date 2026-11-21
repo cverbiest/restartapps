@@ -35,9 +35,14 @@ internal static class TrayMenu
         || message.StartsWith("Could not", StringComparison.Ordinal);
 
     private static bool IsStartupEnabled() =>
-        Environment.ProcessPath is { } exe && StartupRegistration.IsEnabled(exe);
+        Environment.ProcessPath is { } exe && StartupRegistration.Mode(exe) != StartupMode.Off;
 
-    private static void ToggleStartup()
+    /// <summary>Turns starting at logon off, or on in the tray (the Settings page also offers the window).</summary>
+    private static void ToggleStartup() =>
+        SetStartup(IsStartupEnabled() ? StartupMode.Off : StartupMode.Tray);
+
+    /// <summary>Starts this copy of the app at logon as <paramref name="mode"/> says, or stops doing so.</summary>
+    public static void SetStartup(StartupMode mode)
     {
         if (Environment.ProcessPath is not { } exe)
         {
@@ -46,9 +51,13 @@ internal static class TrayMenu
 
         try
         {
-            var enable = !StartupRegistration.IsEnabled(exe);
-            StartupRegistration.Set(enable, exe, "/tray");
-            State.LogMessage(enable ? "Starts with Windows, in the tray." : "No longer starts with Windows.");
+            StartupRegistration.Set(mode, exe);
+            State.LogMessage(mode switch
+            {
+                StartupMode.Tray => "Starts with Windows, in the tray.",
+                StartupMode.Window => "Starts with Windows, with the window open.",
+                _ => "No longer starts with Windows."
+            });
         }
         catch (Exception ex)
         {

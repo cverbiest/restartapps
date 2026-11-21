@@ -128,6 +128,9 @@ can be marked as favorite = on start page and tray **done** (pin on All items, A
 * Single-level menu: Open launcher, the favorites (= the start page items), Start with Windows and
   Exit **done**
 * favorite items **done**
+* Autorun at logon as an option, tray only by default **done** (Settings: Start at logon - don't
+  start, in the tray only, with the window open; the tray's Start with Windows turns it on as tray
+  only; Settings says when Windows starts another copy)
 
 ## profile managment
 

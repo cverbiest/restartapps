@@ -17,6 +17,19 @@
             <Button Content="Open folder" Click="OpenFolder_Click" />
         </StackPanel>
 
+        <TextBlock Text="Start at logon" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,12,0,0" />
+        <RadioButtons x:Name="Startup" SelectionChanged="Startup_SelectionChanged">
+            <x:String>Don't start</x:String>
+            <x:String>In the tray only</x:String>
+            <x:String>With the window open</x:String>
+        </RadioButtons>
+        <TextBlock x:Name="StartupOther" Visibility="Collapsed" TextWrapping="Wrap" IsTextSelectionEnabled="True"
+                   Foreground="{ThemeResource SystemFillColorCautionBrush}" />
+        <TextBlock
+            Text="Starts this copy of the launcher when you log on to Windows. In the tray only, it waits in the notification area: click the tray icon to open the window. Also in the tray menu, as Start with Windows."
+            TextWrapping="Wrap"
+            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
         <TextBlock Text="SSH hosts" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,12,0,0" />
         <ComboBox x:Name="SshClient" Header="Open SSH hosts in" MinWidth="320" SelectionChanged="SshClient_SelectionChanged" />
         <TextBlock
