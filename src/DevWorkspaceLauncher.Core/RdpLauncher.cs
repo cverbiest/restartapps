@@ -208,7 +208,10 @@ public static class RdpLauncher
 
         var monitor = RdpLayout.PickMonitor(Displays.Monitors(), settings.Monitor);
         var geometry = RdpLayout.Compute(settings, monitor, Displays.Chrome(monitor.Dpi));
-        var file = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.rdp");
+        // mstsc titles its window after the file name, so the file carries the connection's name; a
+        // folder of its own keeps two sessions of the same connection apart.
+        var folder = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString())).FullName;
+        var file = Path.Combine(folder, $"{FileName(name)}.rdp");
         File.WriteAllText(file, RdpFileWriter.Build(settings, geometry, baseText));
         if (settings.SigningCertificate is { } thumbprint)
         {
@@ -247,12 +250,12 @@ public static class RdpLauncher
                 CredentialStore.DeleteGeneric(termsrv);
             }
 
-            File.Delete(file);
+            Directory.Delete(folder, recursive: true);
             throw;
         }
 
         log($"Connecting to {name} ({geometry.DesktopWidth}x{geometry.DesktopHeight}{(geometry.ScreenModeId == 2 ? ", full screen" : string.Empty)}).");
-        var cleanup = CleanUpAsync(mstsc, file, wroteCredential ? termsrv : null);
+        var cleanup = CleanUpAsync(mstsc, folder, wroteCredential ? termsrv : null);
         if (settings.Title is { } title)
         {
             cleanup = Task.WhenAll(cleanup, SessionWindow.KeepTitleAsync(mstsc, ExpandTitle(title, host, settings.Username)));
@@ -357,12 +360,20 @@ public static class RdpLauncher
         }
     }
 
-    private static async Task CleanUpAsync(Process mstsc, string file, string? termsrv)
+    /// <summary>The connection's name as a file name: characters Windows does not allow become <c>_</c>.</summary>
+    internal static string FileName(string name)
+    {
+        var invalid = Path.GetInvalidFileNameChars();
+        var safe = new string(name.Select(c => invalid.Contains(c) ? '_' : c).ToArray()).Trim().TrimEnd('.');
+        return safe.Length == 0 ? "connection" : safe;
+    }
+
+    private static async Task CleanUpAsync(Process mstsc, string folder, string? termsrv)
     {
         await Task.Delay(FileLifetime).ConfigureAwait(false);
         try
         {
-            File.Delete(file);
+            Directory.Delete(folder, recursive: true);
         }
         catch (IOException)
         {
