@@ -41,8 +41,10 @@ public class ActionsTests
             """);
 
         Assert.Equal("tool.exe", Assert.Single(configuration.Applications).Commandline);
-        var builtIn = Assert.Single(configuration.Actions.OfType<BuiltInAction>());
-        Assert.Equal((BuiltInActionId.MoveWindowsToMainDisplay, true), (builtIn.BuiltIn, builtIn.Favorite));
+        // The other built-in actions are added, not pinned.
+        var builtIn = Assert.Single(configuration.Actions.OfType<BuiltInAction>(), action => action.Favorite);
+        Assert.Equal(BuiltInActionId.MoveWindowsToMainDisplay, builtIn.BuiltIn);
+        Assert.Equal(BuiltInActions.All.Count, configuration.Actions.OfType<BuiltInAction>().Count());
     }
 
     [Fact]
@@ -57,20 +59,19 @@ public class ActionsTests
     public void Every_built_in_action_is_on_offer_but_only_written_while_pinned_or_used()
     {
         var configuration = AppConfigurationStore.Parse("{}");
-        var builtIn = Assert.Single(configuration.Actions.OfType<BuiltInAction>());
-        Assert.Equal(MoveWindows, builtIn.Name);
+        Assert.Equal(BuiltInActions.All.Select(info => info.Name), configuration.Actions.Select(action => action.Name));
+        var builtIn = configuration.Actions.OfType<BuiltInAction>().Single(action => action.Name == MoveWindows);
         Assert.DoesNotContain("BuiltIn", AppConfigurationStore.ToJson(configuration));
 
-        // Writing leaves it in memory.
-        Assert.Same(builtIn, Assert.Single(configuration.Actions));
+        // Writing leaves them in memory.
+        Assert.Equal(BuiltInActions.All.Count, configuration.Actions.Count);
 
         builtIn.Favorite = true;
         Assert.Contains("\"Kind\": \"BuiltIn\"", AppConfigurationStore.ToJson(configuration));
 
         builtIn.Favorite = false;
         configuration.Activities.Add(new Activity { Name = "Docked", Actions = [new ActivityAction { Name = MoveWindows, Action = ActionVerb.Run }] });
-        var reloaded = AppConfigurationStore.Parse(AppConfigurationStore.ToJson(configuration));
-        Assert.Single(reloaded.Actions.OfType<BuiltInAction>());
+        Assert.Single(AppConfigurationStore.ToJson(configuration).Split("\"Kind\": \"BuiltIn\"").Skip(1));
     }
 
     [Fact]

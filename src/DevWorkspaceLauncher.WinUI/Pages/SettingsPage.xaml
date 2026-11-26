@@ -3,6 +3,7 @@
     x:Class="DevWorkspaceLauncher.WinUI.Pages.SettingsPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer>
     <StackPanel Padding="16" Spacing="12">
         <TextBlock Text="Settings" Style="{StaticResource TitleTextBlockStyle}" />
 
@@ -37,7 +38,22 @@
             TextWrapping="Wrap"
             Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
 
+        <TextBlock Text="Window positions" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,12,0,0" />
+        <TextBlock x:Name="CurrentMonitors" IsTextSelectionEnabled="True" TextWrapping="Wrap" />
+        <ListView x:Name="Layouts" SelectionMode="Single" MaxWidth="720" HorizontalAlignment="Left"
+                  SelectionChanged="Layouts_SelectionChanged" />
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Content="Record current positions" Click="RecordLayout_Click" Style="{StaticResource AccentButtonStyle}" />
+            <Button x:Name="RestoreLayout" Content="Restore" Click="RestoreLayout_Click" />
+            <Button x:Name="DeleteLayout" Content="Delete" Click="DeleteLayout_Click" IsEnabled="False" />
+        </StackPanel>
+        <TextBlock
+            Text="Records where the open windows are, once for each set of monitors (laptop only, laptop with one or two monitors, ...). Restore puts the open windows back where they were recorded for the monitors connected now; windows that are not open are skipped. Also in the tray menu, and as built-in actions you can pin or use in an activity."
+            TextWrapping="Wrap"
+            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
         <TextBlock Text="About" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,12,0,0" />
         <TextBlock x:Name="Version" IsTextSelectionEnabled="True" />
     </StackPanel>
+    </ScrollViewer>
 </Page>

@@ -23,9 +23,32 @@ internal static class TrayMenu
             : [new TrayEntry("No favorites yet: pin items in the launcher") { Enabled = false }]);
 
         entries.Add(TrayEntry.Separator);
+        entries.AddRange(WindowPositionEntries());
         entries.Add(new TrayEntry("Start with Windows", ToggleStartup) { Checked = IsStartupEnabled() });
         entries.Add(new TrayEntry("Exit", App.ExitApp));
         return entries;
+    }
+
+    /// <summary>
+    /// Record and Restore window positions, unless pinned (then they are among the favorites already).
+    /// Restore is greyed out while nothing is recorded for the monitors connected now.
+    /// </summary>
+    private static IEnumerable<TrayEntry> WindowPositionEntries()
+    {
+        var (key, _) = WindowMover.CurrentMonitors();
+        var recorded = WindowLayoutStore.Load().Any(layout => layout.Monitors == key);
+        foreach (var action in State.Config.Actions.OfType<BuiltInAction>())
+        {
+            if (action.Favorite || action.BuiltIn is not (BuiltInActionId.RecordWindowPositions or BuiltInActionId.RestoreWindowPositions))
+            {
+                continue;
+            }
+
+            yield return new TrayEntry(action.Name, () => State.RunAction(action))
+            {
+                Enabled = action.BuiltIn == BuiltInActionId.RecordWindowPositions || recorded
+            };
+        }
     }
 
     /// <summary>Whether a log line reports a problem - the same test as the window's status banner.</summary>

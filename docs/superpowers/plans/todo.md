@@ -146,6 +146,12 @@ probably already (partially) present
 Partial: size presets exist (`RdpSizes`, built-in `fit68` and `full`) and a session can pick a monitor
 (`Monitor`), but a preset is not yet chosen by which monitors are connected.
 
+* Window positions per monitor setup (laptop only, laptop + one or two 27", two 27" with the laptop
+  closed): "Record current positions" stores where every open window is, once per set of connected
+  monitors; Restore puts the open windows back for the monitors connected now (matched by program and
+  title, then by program). In Settings (list, record, restore, delete), the tray, and as built-in
+  actions to pin or use in an activity; restored by hand, not automatically **done** (to try on the laptop)
+
 # WinForms app
 
 * Update it to the new configuration: after app profiles and workspace sessions became activities it

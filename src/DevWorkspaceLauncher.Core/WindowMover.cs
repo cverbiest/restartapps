@@ -15,6 +15,14 @@ public static class BuiltInActionRunner
                 case BuiltInActionId.MoveWindowsToMainDisplay:
                     WindowMover.MoveAllToPrimary(log);
                     break;
+
+                case BuiltInActionId.RecordWindowPositions:
+                    WindowMover.RecordLayout(log);
+                    break;
+
+                case BuiltInActionId.RestoreWindowPositions:
+                    WindowMover.RestoreLayout(log);
+                    break;
             }
         }
         catch (Exception ex)
@@ -25,7 +33,7 @@ public static class BuiltInActionRunner
 }
 
 /// <summary>Moves windows that are on another monitor to the primary one.</summary>
-public static class WindowMover
+public static partial class WindowMover
 {
     private const int GWL_STYLE = -16;
     private const int GWL_EXSTYLE = -20;

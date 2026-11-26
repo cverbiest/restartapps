@@ -17,7 +17,13 @@ public enum ActionKind
 public enum BuiltInActionId
 {
     /// <summary>Moves every window on another monitor to the primary one; see <see cref="WindowMover"/>.</summary>
-    MoveWindowsToMainDisplay
+    MoveWindowsToMainDisplay,
+
+    /// <summary>Records where the open windows are, for the monitors connected now; see <see cref="WindowMover.RecordLayout"/>.</summary>
+    RecordWindowPositions,
+
+    /// <summary>Puts the open windows where they were recorded for the monitors connected now; see <see cref="WindowMover.RestoreLayout"/>.</summary>
+    RestoreWindowPositions
 }
 
 /// <summary>
@@ -131,6 +137,14 @@ public static class BuiltInActions
         new(BuiltInActionId.MoveWindowsToMainDisplay,
             "Move all windows to the main display",
             "Moves every window on another monitor to the main one, keeping its size and whether it is maximized.",
+            [ActionVerb.Run]),
+        new(BuiltInActionId.RecordWindowPositions,
+            "Record window positions",
+            "Records where the open windows are, for the monitors connected now (one record per set of monitors).",
+            [ActionVerb.Run]),
+        new(BuiltInActionId.RestoreWindowPositions,
+            "Restore window positions",
+            "Puts the open windows where they were recorded for the monitors connected now.",
             [ActionVerb.Run])
     ];
 
