@@ -74,8 +74,8 @@ can be marked as favorite = on start page and tray **done** (pin on All items, A
 * Rename the Workspaces tab to VS Code workspaces **done**
 * The grid is not like the others **done** (intro line, coloured star, no per-row Launch button:
   double-click opens or focuses, as the other grids run their row)
-* "develop" on Windows and on cce-dev03 look identical: show the host in the name **done**
-  ("develop (cce-dev03)"; also in the activity editor)
+* "develop" on Windows and on dev-host-01 look identical: show the host in the name **done**
+  ("develop (dev-host-01)"; also in the activity editor)
 * If possible a Last used column, and sorting by clicking a column header **done**
 * Keep the UX similar across tabs, differ only when relevant: sorting on every grid **done** (All items,
   Activities, Apps, VS Code workspaces, RDP sessions; the pin/star column sorts favorites first); every
@@ -115,7 +115,7 @@ can be marked as favorite = on start page and tray **done** (pin on All items, A
 * Apps tab: only the app definitions (add, edit, delete, drop exe/shortcut files); multi-select with
   Start / Stop / Restart instead of the Kill/Restart ticks and the Profile menu **done**
 * Workspaces tab: the Session menu goes **done** (Open / Close act on the selected rows, no more ticks)
-* Running "Develop workspaces" did not open the cce-dev03 workspace: when the launcher was started from
+* Running "Develop workspaces" did not open the dev-host-01 workspace: when the launcher was started from
   inside VS Code, the `ELECTRON_RUN_AS_NODE` it inherited made Code.exe exit without opening anything
   **done** (no longer passed on to VS Code)
 * Later: activities inside activities

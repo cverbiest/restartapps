@@ -16,7 +16,7 @@ public class ActivityPlannerTests
             new ApplicationAction { Name = "D", Commandline = "d.exe", Disabled = true }
         ],
         Workspaces = [new WorkspaceFavorite { Name = "One (pinned)", Uri = U1, WindowTitle = "one*" }],
-        RdpSessions = [new RdpSession { Name = "demo", Host = "demo25" }]
+        RdpSessions = [new RdpSession { Name = "demo", Host = "demo01" }]
     };
 
     private readonly HashSet<string> _running = new(StringComparer.OrdinalIgnoreCase);

@@ -31,10 +31,10 @@ public class ActivityOperationsTests
         };
 
         ActivityOperations.RenameAction(config, "teams", "Teams (new)");
-        ActivityOperations.RenameRdpSession(config, "DEMO", "demo25");
+        ActivityOperations.RenameRdpSession(config, "DEMO", "demo01");
 
         Assert.Equal("Teams (new)", config.Activities[0].Actions[0].Name);
-        Assert.Equal("demo25", config.Activities[0].RdpSessions[0].Name);
+        Assert.Equal("demo01", config.Activities[0].RdpSessions[0].Name);
     }
 
     [Fact]

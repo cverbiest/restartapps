@@ -55,7 +55,7 @@
   ],
   "Profiles": [],
   "Workspaces": [
-    { "Name": "restartapps", "Uri": "file:///c%3A/cce/workspaces/restartapps" }
+    { "Name": "restartapps", "Uri": "file:///c%3A/dev/workspaces/restartapps" }
   ],
   "RdpSessions": [
     { "Name": "Build server", "Host": "build01.example.local", "Credential": "DWL:build-admin", "Size": "fit68" },
@@ -74,7 +74,7 @@
         { "Name": "Move all windows to the main display", "Action": "Run" }
       ],
       "Workspaces": [
-        { "Uri": "file:///c%3A/cce/workspaces/restartapps" }
+        { "Uri": "file:///c%3A/dev/workspaces/restartapps" }
       ]
     },
     {

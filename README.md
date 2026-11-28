@@ -300,8 +300,8 @@ than by hand:
 
 ```json
   "Workspaces": [
-    { "Name": "develop (linux)", "Uri": "vscode-remote://ssh-remote%2Bcce-dev03/home/cvb/develop/develop.code-workspace" },
-    { "Name": "restartapps", "Uri": "file:///c%3A/cce/workspaces/restartapps" }
+    { "Name": "develop (linux)", "Uri": "vscode-remote://ssh-remote%2Bdev-host-01/home/alex/develop/develop.code-workspace" },
+    { "Name": "restartapps", "Uri": "file:///c%3A/dev/workspaces/restartapps" }
   ]
 ```
 
@@ -315,7 +315,7 @@ Sessions live in `WorkspaceProfiles`, each a name and the URIs it opens:
 
 ```json
   "WorkspaceProfiles": [
-    { "Name": "Linux dev", "Workspaces": [ "vscode-remote://ssh-remote%2Bcce-dev03/home/cvb/develop/develop.code-workspace" ] }
+    { "Name": "Linux dev", "Workspaces": [ "vscode-remote://ssh-remote%2Bdev-host-01/home/alex/develop/develop.code-workspace" ] }
   ]
 ```
 
@@ -331,7 +331,7 @@ Activities live in `Activities`:
         { "Name": "Move all windows to the main display", "Action": "Run" }
       ],
       "Workspaces": [
-        { "Uri": "vscode-remote://ssh-remote%2Bcce-dev03/home/cvb/develop/develop.code-workspace" }
+        { "Uri": "vscode-remote://ssh-remote%2Bdev-host-01/home/alex/develop/develop.code-workspace" }
       ]
     },
     { "Name": "Wind down", "Actions": [ { "Name": "Teams", "Action": "Stop" } ] }

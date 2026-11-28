@@ -65,7 +65,7 @@ public static class VsCodeUri
     }
 
     /// <summary>
-    /// The name with the remote host after it - "develop (cce-dev03)" - so a local and a remote
+    /// The name with the remote host after it - "develop (dev-host-01)" - so a local and a remote
     /// workspace of the same name can be told apart. Local workspaces, and names that already
     /// mention the host, are left as they are.
     /// </summary>

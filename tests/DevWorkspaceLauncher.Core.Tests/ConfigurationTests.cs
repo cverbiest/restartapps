@@ -123,7 +123,7 @@ public class ConfigurationTests
             Profiles = [new Profile { Name = "Work", Favorite = true }],
             WorkspaceProfiles = [new WorkspaceProfile { Name = "Linux dev", Favorite = true }],
             Activities = [new Activity { Name = "Deploy", Favorite = true }],
-            RdpSessions = [new RdpSession { Name = "demo", Host = "demo25", Favorite = true }]
+            RdpSessions = [new RdpSession { Name = "demo", Host = "demo01", Favorite = true }]
         };
 
         var reloaded = AppConfigurationStore.Parse(AppConfigurationStore.ToJson(configuration));
@@ -140,7 +140,7 @@ public class ConfigurationTests
         var configuration = new ConfigurationFile
         {
             Profiles = [new Profile { Name = "Work" }],
-            RdpSessions = [new RdpSession { Name = "demo", Host = "demo25" }]
+            RdpSessions = [new RdpSession { Name = "demo", Host = "demo01" }]
         };
 
         Assert.DoesNotContain("Favorite", AppConfigurationStore.ToJson(configuration));

@@ -5,10 +5,10 @@ public class VsCodeWindowsTests
     private static readonly string[] Titles =
     [
         "restartapps - Untitled-1",
-        "b1-cce-poc - Dev Container: Local Dev Container",
+        "b1-demo-poc - Dev Container: Local Dev Container",
         "develop linux",
         "develop windows",
-        "schema - SSH: cce-dev03_cvb - lisa_inc_add.df"
+        "schema - SSH: dev-host-01_alex - orders_add.df"
     ];
 
     [Fact]

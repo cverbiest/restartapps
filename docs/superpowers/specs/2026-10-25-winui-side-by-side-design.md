@@ -131,7 +131,7 @@ is left alone. This differs from a profile, which clears every app it does not m
       { "Name": "Outlook",  "Action": "Start" }
     ],
     "Workspaces": [
-      { "Uri": "vscode-remote://ssh-remote%2Bcce-dev03/home/cvb/develop/develop.code-workspace" }
+      { "Uri": "vscode-remote://ssh-remote%2Bdev-host-01/home/alex/develop/develop.code-workspace" }
     ]
   },
   {

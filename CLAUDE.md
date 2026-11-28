@@ -11,3 +11,12 @@ so they are the same on every computer.
   adding a duplicate; delete one that turns out to be wrong.
 - Memory changes are part of the working tree like any other change: don't commit them before the
   user has reviewed them.
+
+## No employer- or environment-specific names
+
+Code, tests, docs, examples and the wiki use placeholders or fictional names, never real ones from
+the machine this is developed on: the fictional company Contoso (`contoso.local`, domain
+`CONTOSO`), `example.com`, user `alex`, hosts like `dev-host-01`, `rds01`, `demo01`, VPN
+`contoso-vpn`. That covers the employer's name, internal host names, domains, IP addresses, network
+and VPN names, share paths, user names, colleagues and customers. The `LICENSE` copyright line is
+the author's, not an example, and stays.

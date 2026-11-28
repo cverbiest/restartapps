@@ -45,7 +45,7 @@ public class FavoriteOrderingTests
         var config = new ConfigurationFile
         {
             Actions = [new ApplicationAction { Name = "Teams", Commandline = "teams.exe", Favorite = true, FavoriteOrder = 2 }],
-            RdpSessions = [new RdpSession { Name = "demo", Host = "demo25", Favorite = true }]
+            RdpSessions = [new RdpSession { Name = "demo", Host = "demo01", Favorite = true }]
         };
 
         var json = AppConfigurationStore.ToJson(config);

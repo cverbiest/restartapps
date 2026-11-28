@@ -202,12 +202,12 @@ public class RdpFileWriterTests
     [Fact]
     public void Writes_the_explicit_settings_and_never_a_password()
     {
-        var settings = new RdpSettings { Host = "srv:3390", Username = "carl", Domain = "CCE", Zoom = 150 };
+        var settings = new RdpSettings { Host = "srv:3390", Username = "alex", Domain = "CONTOSO", Zoom = 150 };
 
         var lines = RdpFileWriter.Build(settings, Geometry).Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
 
         Assert.Contains("full address:s:srv:3390", lines);
-        Assert.Contains("username:s:CCE\\carl", lines);
+        Assert.Contains("username:s:CONTOSO\\alex", lines);
         Assert.Contains("winposstr:s:0,1,10,20,1306,779", lines);
         Assert.Contains("desktopscalefactor:i:150", lines);
         Assert.Contains("smart sizing:i:0", lines);
@@ -278,10 +278,10 @@ public class RdpPlusImportTests
 {
     private const string Listing = """
         init failed: Parameter count mismatch.
-        cce-rds01_cvb | secure=False | /v:cce-rds01.cce.local /i:cce_cvb /title:"%s (%u) – RDP"  /fit:65%
-        demo25 customers_cvb | secure=False | /v:demo25.cce.local /i:customers_cvb /title:"%s (%u) " /drives /w:1865 /h:1050
+        rds01_alex | secure=False | /v:rds01.contoso.local /i:contoso_alex /title:"%s (%u) – RDP"  /fit:65%
+        demo01 customers_alex | secure=False | /v:demo01.contoso.local /i:customers_alex /title:"%s (%u) " /drives /w:1865 /h:1050
         web | secure=False | /v:web01 /fit:90%  /i:customers_admin /o:"gatewayhostname:s:remote.example,gatewayusagemethod:i:1" /sound
-        f  cce-rds-dev01_cvb | secure=False | /v:cce-rds-dev01 /admin
+        f  rds-dev01_alex | secure=False | /v:rds-dev01 /admin
         """;
 
     [Fact]
@@ -289,10 +289,10 @@ public class RdpPlusImportTests
     {
         var entries = RdpPlusImport.ParseListing(Listing);
 
-        Assert.Equal(["cce-rds01_cvb", "demo25 customers_cvb", "web", "f cce-rds-dev01_cvb"], entries.Select(entry => entry.Name));
+        Assert.Equal(["rds01_alex", "demo01 customers_alex", "web", "f rds-dev01_alex"], entries.Select(entry => entry.Name));
 
         var first = entries[0].Settings;
-        Assert.Equal(("cce-rds01.cce.local", "cce_cvb", "%s (%u) – RDP"), (first.Host, first.Credential, first.Title));
+        Assert.Equal(("rds01.contoso.local", "contoso_alex", "%s (%u) – RDP"), (first.Host, first.Credential, first.Title));
         Assert.Equal((RdpDisplayMode.Fit, 65), (first.Mode, first.Fit));
 
         var second = entries[1].Settings;
@@ -316,12 +316,12 @@ public class RdpPlusImportTests
     }
 
     [Theory]
-    [InlineData("%s (%u) – RDP", @"srv (CCE\carl) – RDP")]
+    [InlineData("%s (%u) – RDP", @"srv (CONTOSO\alex) – RDP")]
     [InlineData("Michielssen %s", "Michielssen srv")]
     [InlineData("%systemroot%", @"C:\WINDOWS")]
     public void Title_expands_host_user_and_variables(string template, string expected)
     {
-        Assert.Equal(expected, RdpLauncher.ExpandTitle(template, "srv", @"CCE\carl"), ignoreCase: true);
+        Assert.Equal(expected, RdpLauncher.ExpandTitle(template, "srv", @"CONTOSO\alex"), ignoreCase: true);
     }
 
     [Theory]

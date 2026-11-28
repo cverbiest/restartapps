@@ -29,11 +29,11 @@ VS Code first and hunting through *File > Open Recent*, and nothing says which a
 has ever opened:
 
 ```json
-{ "folder": "file:///c%3A/cce/workspaces/restartapps" }
+{ "folder": "file:///c%3A/dev/workspaces/restartapps" }
 ```
 
 ```json
-{ "workspace": "vscode-remote://ssh-remote%2Bcce-dev03_cvb/home/cce/cvb/workspaces/develop/develop.code-workspace" }
+{ "workspace": "vscode-remote://ssh-remote%2Bdev-host-01_alex/home/contoso/alex/workspaces/develop/develop.code-workspace" }
 ```
 
 The directory name is VS Code's workspace id. The directory's last-write time is when the
@@ -97,7 +97,7 @@ A third top-level property beside `Apps` and `Profiles`:
   "Workspaces": [
     {
       "Name": "develop (linux)",
-      "Uri": "vscode-remote://ssh-remote%2Bcce-dev03_cvb/home/cce/cvb/workspaces/develop/develop.code-workspace"
+      "Uri": "vscode-remote://ssh-remote%2Bdev-host-01_alex/home/contoso/alex/workspaces/develop/develop.code-workspace"
     }
   ],
   "VsCodeExecutable": "C:\\Program Files\\Microsoft VS Code\\Code.exe"

@@ -6,16 +6,16 @@ public class SshConfigTests
         "# my hosts\n" +
         "Include extra.conf\n" +
         "\n" +
-        "Host dev03 dev03.cce.local\n" +
-        "  HostName cce-dev03\n" +
-        "  user cvb\n" +
+        "Host dev03 dev03.contoso.local\n" +
+        "  HostName dev-host-01\n" +
+        "  user alex\n" +
         "  IdentityFile ~/.ssh/id_dev\n" +
         "  IdentityFile ~/.ssh/id_old\n" +
         "  ForwardAgent yes\n" +
         "\n" +
         "# the build box\n" +
         "Host=build\n" +
-        "    HostName=\"build.cce.be\"\n" +
+        "    HostName=\"build.example.com\"\n" +
         "\n" +
         "Host *\n" +
         "  ServerAliveInterval 30\n";
@@ -28,12 +28,12 @@ public class SshConfigTests
         var hosts = SshConfigDocument.Parse(Sample).Hosts;
 
         Assert.Equal(["dev03", "build"], hosts.Select(host => host.Alias));
-        Assert.Equal(["dev03.cce.local"], hosts[0].OtherPatterns);
-        Assert.Equal("cce-dev03", hosts[0].HostName);
-        Assert.Equal("cvb", hosts[0].User);
+        Assert.Equal(["dev03.contoso.local"], hosts[0].OtherPatterns);
+        Assert.Equal("dev-host-01", hosts[0].HostName);
+        Assert.Equal("alex", hosts[0].User);
         Assert.Equal("~/.ssh/id_dev", hosts[0].IdentityFile);
         Assert.Equal(["~/.ssh/id_old"], hosts[0].MoreIdentityFiles);
-        Assert.Equal("build.cce.be", hosts[1].HostName);
+        Assert.Equal("build.example.com", hosts[1].HostName);
         Assert.Null(hosts[1].User);
     }
 
@@ -53,7 +53,7 @@ public class SshConfigTests
 
         document.Update("dev03", Fields(document.Hosts[0]) with { User = "root" });
 
-        Assert.Equal(Sample.Replace("  user cvb\n", "  user root\n"), document.ToText());
+        Assert.Equal(Sample.Replace("  user alex\n", "  user root\n"), document.ToText());
     }
 
     [Fact]
@@ -61,9 +61,9 @@ public class SshConfigTests
     {
         var document = SshConfigDocument.Parse(Sample);
 
-        document.Update("build", Fields(document.Hosts[1]) with { HostName = "other.cce.be" });
+        document.Update("build", Fields(document.Hosts[1]) with { HostName = "other.example.com" });
 
-        Assert.Contains("\nHost=build\n    HostName=\"other.cce.be\"\n\n", document.ToText());
+        Assert.Contains("\nHost=build\n    HostName=\"other.example.com\"\n\n", document.ToText());
     }
 
     [Fact]
@@ -71,9 +71,9 @@ public class SshConfigTests
     {
         var document = SshConfigDocument.Parse(Sample);
 
-        document.Update("build", Fields(document.Hosts[1]) with { IdentityFile = @"C:\Users\c v b\.ssh\id" });
+        document.Update("build", Fields(document.Hosts[1]) with { IdentityFile = @"C:\Users\j doe\.ssh\id" });
 
-        Assert.Contains("    HostName=\"build.cce.be\"\n    IdentityFile \"C:\\Users\\c v b\\.ssh\\id\"\n\nHost *", document.ToText());
+        Assert.Contains("    HostName=\"build.example.com\"\n    IdentityFile \"C:\\Users\\j doe\\.ssh\\id\"\n\nHost *", document.ToText());
     }
 
     [Fact]
@@ -83,7 +83,7 @@ public class SshConfigTests
 
         document.Update("build", Fields(document.Hosts[1]) with { User = "jenkins" });
 
-        Assert.Contains("    HostName=\"build.cce.be\"\n    User jenkins\n\nHost *", document.ToText());
+        Assert.Contains("    HostName=\"build.example.com\"\n    User jenkins\n\nHost *", document.ToText());
     }
 
     [Fact]
@@ -105,7 +105,7 @@ public class SshConfigTests
 
         document.Update("dev03", Fields(document.Hosts[0]) with { Alias = "dev3" });
 
-        Assert.Contains("\nHost dev3 dev03.cce.local\n", document.ToText());
+        Assert.Contains("\nHost dev3 dev03.contoso.local\n", document.ToText());
     }
 
     [Fact]
@@ -113,10 +113,10 @@ public class SshConfigTests
     {
         var document = SshConfigDocument.Parse(Sample);
 
-        document.Add(new SshHostFields("new", "new.cce.be", "cvb", null));
+        document.Add(new SshHostFields("new", "new.example.com", "alex", null));
 
         Assert.EndsWith(
-            "    HostName=\"build.cce.be\"\n\nHost new\n  HostName new.cce.be\n  User cvb\n\nHost *\n  ServerAliveInterval 30\n",
+            "    HostName=\"build.example.com\"\n\nHost new\n  HostName new.example.com\n  User alex\n\nHost *\n  ServerAliveInterval 30\n",
             document.ToText());
     }
 
@@ -157,7 +157,7 @@ public class SshConfigTests
 
         Assert.True(document.Remove("build"));
 
-        Assert.Equal(Sample.Replace("# the build box\nHost=build\n    HostName=\"build.cce.be\"\n\n", string.Empty), document.ToText());
+        Assert.Equal(Sample.Replace("# the build box\nHost=build\n    HostName=\"build.example.com\"\n\n", string.Empty), document.ToText());
     }
 
     [Fact]
@@ -239,7 +239,7 @@ public class SshConfigTests
     [InlineData("a b", false)]
     [InlineData("dev*", false)]
     [InlineData("!dev", false)]
-    [InlineData("cce-dev03_cvb", true)]
+    [InlineData("dev-host-01_alex", true)]
     public void Alias_rules(string alias, bool valid)
     {
         Assert.Equal(valid, SshConfigDocument.IsValidAlias(alias));

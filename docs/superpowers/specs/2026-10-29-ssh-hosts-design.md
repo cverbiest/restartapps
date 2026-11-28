@@ -81,7 +81,7 @@ not listed.
 ### What the launcher stores
 
 The launcher's configuration file stores only launcher settings, keyed by alias:
-`"SshHosts": [ { "Alias": "cce-dev03_cvb", "Favorite": true, "FavoriteOrder": 3 } ]`, written only
+`"SshHosts": [ { "Alias": "dev-host-01_alex", "Favorite": true, "FavoriteOrder": 3 } ]`, written only
 for hosts that have a setting. An activity names a host in `"SshHosts": [ { "Name": "..." } ]`,
 like `RdpSessions`. Renaming an alias in the tab updates both; deleting a host removes its
 settings and its place in activities. A setting or activity item whose alias is no longer in the

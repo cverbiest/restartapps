@@ -5,41 +5,41 @@ public class VsCodeUriTests
     [Fact]
     public void Describes_a_local_folder()
     {
-        var (kind, name, location) = VsCodeUri.Describe("file:///c%3A/cce/workspaces/restartapps");
+        var (kind, name, location) = VsCodeUri.Describe("file:///c%3A/dev/workspaces/restartapps");
 
         Assert.Equal(WorkspaceKind.Folder, kind);
         Assert.Equal("restartapps", name);
-        Assert.Equal(@"c:\cce\workspaces\restartapps", location);
+        Assert.Equal(@"c:\dev\workspaces\restartapps", location);
     }
 
     [Fact]
     public void Describes_a_local_workspace_file()
     {
-        var (kind, name, location) = VsCodeUri.Describe("file:///c%3A/cce/workspaces/develop/develop.code-workspace");
+        var (kind, name, location) = VsCodeUri.Describe("file:///c%3A/dev/workspaces/develop/develop.code-workspace");
 
         Assert.Equal(WorkspaceKind.WorkspaceFile, kind);
         Assert.Equal("develop", name);
-        Assert.Equal(@"c:\cce\workspaces\develop\develop.code-workspace", location);
+        Assert.Equal(@"c:\dev\workspaces\develop\develop.code-workspace", location);
     }
 
     [Fact]
     public void Describes_an_ssh_remote_workspace_file()
     {
         var (kind, name, location) = VsCodeUri.Describe(
-            "vscode-remote://ssh-remote%2Bcce-dev03_cvb/home/cce/cvb/workspaces/develop/develop.code-workspace");
+            "vscode-remote://ssh-remote%2Bdev-host-01_alex/home/contoso/alex/workspaces/develop/develop.code-workspace");
 
         Assert.Equal(WorkspaceKind.WorkspaceFile, kind);
         Assert.Equal("develop", name);
-        Assert.Equal("SSH: cce-dev03_cvb", location);
+        Assert.Equal("SSH: dev-host-01_alex", location);
     }
 
     [Fact]
     public void Describes_a_wsl_folder()
     {
-        var (kind, name, location) = VsCodeUri.Describe("vscode-remote://wsl%2BUbuntu/home/cvb/code/b1-cce-poc");
+        var (kind, name, location) = VsCodeUri.Describe("vscode-remote://wsl%2BUbuntu/home/alex/code/b1-demo-poc");
 
         Assert.Equal(WorkspaceKind.Folder, kind);
-        Assert.Equal("b1-cce-poc", name);
+        Assert.Equal("b1-demo-poc", name);
         Assert.Equal("WSL: Ubuntu", location);
     }
 
@@ -47,17 +47,17 @@ public class VsCodeUriTests
     public void Describes_a_dev_container_folder_without_showing_its_encoded_authority()
     {
         var (kind, name, location) = VsCodeUri.Describe(
-            "vscode-remote://dev-container%2B7b22686f737450617468223a222782f79227d/workspaces/b1-cce-poc");
+            "vscode-remote://dev-container%2B7b22686f737450617468223a222782f79227d/workspaces/b1-demo-poc");
 
         Assert.Equal(WorkspaceKind.Folder, kind);
-        Assert.Equal("b1-cce-poc", name);
+        Assert.Equal("b1-demo-poc", name);
         Assert.Equal("Dev Container", location);
     }
 
     [Fact]
     public void Ignores_a_trailing_slash_on_a_folder()
     {
-        var (_, name, _) = VsCodeUri.Describe("file:///c%3A/cce/workspaces/restartapps/");
+        var (_, name, _) = VsCodeUri.Describe("file:///c%3A/dev/workspaces/restartapps/");
 
         Assert.Equal("restartapps", name);
     }
@@ -81,10 +81,10 @@ public class VsCodeUriTests
     }
 
     [Theory]
-    [InlineData("file:///c%3A/cce/workspaces/develop/develop.code-workspace", "develop", "develop")]
-    [InlineData("vscode-remote://ssh-remote%2Bcce-dev03/home/cvb/develop.code-workspace", "develop", "develop (cce-dev03)")]
-    [InlineData("vscode-remote://wsl%2BUbuntu/home/cvb/code/b1", "b1", "b1 (Ubuntu)")]
-    [InlineData("vscode-remote://ssh-remote%2Bcce-dev03/home/cvb/develop", "develop (cce-dev03)", "develop (cce-dev03)")]
+    [InlineData("file:///c%3A/dev/workspaces/develop/develop.code-workspace", "develop", "develop")]
+    [InlineData("vscode-remote://ssh-remote%2Bdev-host-01/home/alex/develop.code-workspace", "develop", "develop (dev-host-01)")]
+    [InlineData("vscode-remote://wsl%2BUbuntu/home/alex/code/b1", "b1", "b1 (Ubuntu)")]
+    [InlineData("vscode-remote://ssh-remote%2Bdev-host-01/home/alex/develop", "develop (dev-host-01)", "develop (dev-host-01)")]
     public void Title_adds_the_remote_host_unless_the_name_has_it(string uri, string name, string expected)
     {
         Assert.Equal(expected, VsCodeUri.Title(name, uri));

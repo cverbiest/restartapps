@@ -8,7 +8,7 @@ public class NetworksTests
     [InlineData(NetworkInterfaceType.Ethernet, "TPLink network to Linksys", "TP-LINK Gigabit Ethernet USB Adapter", NetworkKind.Wired)]
     [InlineData(NetworkInterfaceType.Wireless80211, "Wi-Fi 2", "TP-Link Wireless USB Adapter", NetworkKind.WiFi)]
     [InlineData(NetworkInterfaceType.Wwanpp, "Cellular", "Mobile Broadband", NetworkKind.Mobile)]
-    [InlineData(NetworkInterfaceType.Ppp, "cce2", "cce2", NetworkKind.Vpn)]
+    [InlineData(NetworkInterfaceType.Ppp, "contoso-vpn", "contoso-vpn", NetworkKind.Vpn)]
     [InlineData(NetworkInterfaceType.Ethernet, "Ugreen USB Adapter", "TAP-Windows Adapter V9", NetworkKind.Vpn)]
     [InlineData((NetworkInterfaceType)53, "Local Area Connection", "TAP Adapter OAS NDIS 6.0", NetworkKind.Vpn)]
     [InlineData(NetworkInterfaceType.Ethernet, "wg0", "WireGuard Tunnel", NetworkKind.Vpn)]
@@ -41,10 +41,10 @@ public class NetworksTests
     {
         var sorted = NetworkInterfaceStatus.Sorted(
         [
-            Status("vpn", NetworkKind.Vpn, connected: true, "cce2"),
+            Status("vpn", NetworkKind.Vpn, connected: true, "contoso-vpn"),
             Status("wifi", NetworkKind.WiFi, connected: true, "Home"),
             Status("down", NetworkKind.Wired, connected: false, null),
-            Status("dock", NetworkKind.Wired, connected: true, "cce.local")
+            Status("dock", NetworkKind.Wired, connected: true, "contoso.local")
         ]);
 
         Assert.Equal(["dock", "wifi", "vpn", "down"], sorted.Select(item => item.Id));
@@ -53,10 +53,10 @@ public class NetworksTests
     [Fact]
     public void Display_name_is_the_configured_one_else_the_network_else_the_interface()
     {
-        var status = Status("id", NetworkKind.Wired, connected: true, "cce.local");
+        var status = Status("id", NetworkKind.Wired, connected: true, "contoso.local");
 
         Assert.Equal("Dock", status.DisplayName(new NetworkInterfaceSettings { Id = "id", Name = "Dock" }));
-        Assert.Equal("cce.local", status.DisplayName(null));
+        Assert.Equal("contoso.local", status.DisplayName(null));
         Assert.Equal("Ethernet", (status with { NetworkName = null }).DisplayName(null));
     }
 
@@ -76,7 +76,7 @@ public class NetworksTests
     [Fact]
     public void Details_text_has_one_label_per_detail_and_indents_extra_lines()
     {
-        var status = Status("id", NetworkKind.Wired, connected: true, "cce.local") with
+        var status = Status("id", NetworkKind.Wired, connected: true, "contoso.local") with
         {
             IPv4 = ["10.0.0.5/24"],
             DnsServers = ["10.0.0.1", "10.0.0.2"]
@@ -113,7 +113,7 @@ public class NetworksTests
     [Fact]
     public void Interfaces_with_settings_stay_listed_while_absent()
     {
-        var present = new[] { Status("{A}", NetworkKind.Wired, connected: true, "cce.local") };
+        var present = new[] { Status("{A}", NetworkKind.Wired, connected: true, "contoso.local") };
         var settings = new[]
         {
             new NetworkInterfaceSettings { Id = "{a}", Name = "Dock" },
@@ -152,16 +152,16 @@ public class NetworksTests
     [Fact]
     public void Phonebook_vpn_entries_are_the_sections_of_type_2()
     {
-        const string phonebook = "[mail.cce.be]\r\nEncoding=1\r\nType=2\r\nPhoneNumber=mail.cce.be\r\n\r\n[Dial-up]\r\nType=1\r\n\r\n[cce2]\r\nType=2\r\n";
+        const string phonebook = "[mail.example.com]\r\nEncoding=1\r\nType=2\r\nPhoneNumber=mail.example.com\r\n\r\n[Dial-up]\r\nType=1\r\n\r\n[contoso-vpn]\r\nType=2\r\n";
 
-        Assert.Equal(["mail.cce.be", "cce2"], NetworkInterfaces.ParseVpnEntries(phonebook));
+        Assert.Equal(["mail.example.com", "contoso-vpn"], NetworkInterfaces.ParseVpnEntries(phonebook));
     }
 
     [Theory]
     [InlineData(NetworkKind.WiFi, null, "ms-availablenetworks:", null)]
     [InlineData(NetworkKind.Wired, null, "ms-settings:network-ethernet", null)]
     [InlineData(NetworkKind.Vpn, null, "ms-settings:network-vpn", null)]
-    [InlineData(NetworkKind.Vpn, "cce2", "rasphone.exe", "-d \"cce2\"")]
+    [InlineData(NetworkKind.Vpn, "contoso-vpn", "rasphone.exe", "-d \"contoso-vpn\"")]
     public void Connect_opens_the_dialog_for_the_kind(NetworkKind kind, string? entry, string fileName, string? arguments)
     {
         var status = Status("id", kind, connected: false, null) with { VpnEntry = entry };

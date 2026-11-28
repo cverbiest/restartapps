@@ -16,7 +16,7 @@ public sealed record RdpImportResult(IReadOnlyList<RdpSession> Added, IReadOnlyL
 /// <para>
 /// RDP+ stores favorites encrypted, so the input is a decrypted listing: one
 /// <c>name | secure=... | command line</c> per favorite, for example
-/// <c>build server | secure=False | /v:build01 /i:cce_cvb /fit:65%</c>.
+/// <c>build server | secure=False | /v:build01 /i:contoso_alex /fit:65%</c>.
 /// </para>
 /// </summary>
 public static partial class RdpPlusImport

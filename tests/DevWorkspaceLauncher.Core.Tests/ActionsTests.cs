@@ -100,7 +100,7 @@ public class ActionsTests
             ],
             RdpSessions = [new ActivityRdpSession { Name = "demo" }]
         };
-        configuration.RdpSessions.Add(new RdpSession { Name = "demo", Host = "demo25" });
+        configuration.RdpSessions.Add(new RdpSession { Name = "demo", Host = "demo01" });
 
         var plan = ActivityPlanner.Plan(activity, configuration, _ => false);
 
